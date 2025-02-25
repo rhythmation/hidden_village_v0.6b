@@ -1,8 +1,8 @@
 import { Link } from "react-router-dom";
 import { useState, useEffect } from 'react';
-import PoseDrawer from "../../components/Pose/PoseDrawer.jsx";
-import GetPoseData from "../../components/Pose/MotionCaptureUtils.jsx";
-import PoseCursor from "./PoseCursor";
+import PoseDrawer from "../Pose/PoseDrawer.jsx";
+import GetPoseData from "../Pose/MotionCaptureUtils.jsx";
+import PoseCursor from "./PoseCursor.jsx";
 import './GamePlayer.css';
 
 // Constants for UI elements

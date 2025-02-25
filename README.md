@@ -4,6 +4,8 @@ To get started, clone repo via preferred method
 
 then run the following in the console/terminal:
 
+cd client
+
 npm install
 
 npm run dev
