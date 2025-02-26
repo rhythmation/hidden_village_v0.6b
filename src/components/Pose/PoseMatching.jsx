@@ -9,6 +9,8 @@ export function PoseMatch({
 }) {
     const [poseToMatch, setPoseToMatch] = useState(null);
     const [similarityScores, setSimilarityScores] = useState([]);
+    const [lastValidPoseData, setLastValidPoseData] = useState(null);
+
     const matchConfig = [
         {"segment": "RIGHT_BICEP", "data": "poseLandmarks"}, 
         {"segment": "RIGHT_FOREARM", "data": "poseLandmarks"},
@@ -19,6 +21,13 @@ export function PoseMatch({
     const width = 400;
     const height = 600;
 
+    // Store last valid pose data to prevent whiteout screen
+    useEffect(() => {
+        if (poseData && poseData.poseLandmarks) {
+            setLastValidPoseData(poseData);
+        }
+    }, [poseData]);
+
     // Set initial pose to match when posesToMatch changes
     useEffect(() => {
         if (posesToMatch && posesToMatch.length > 0) {
@@ -28,9 +37,9 @@ export function PoseMatch({
 
     // Calculate pose similarity when poseData or poseToMatch changes
     useEffect(() => {
-        if (!poseData || !poseToMatch) return;
+        if (!lastValidPoseData || !lastValidPoseData.poseLandmarks || !poseToMatch) return;
 
-        const enrichedPoseData = enrichLandmarks(poseData);
+        const enrichedPoseData = enrichLandmarks(lastValidPoseData);
         const enrichedPoseToMatch = enrichLandmarks(poseToMatch);
 
         const newSimilarityScores = matchConfig.map(config => {
@@ -59,7 +68,7 @@ export function PoseMatch({
         });
 
         setSimilarityScores(newSimilarityScores);
-    }, [poseData, poseToMatch]);
+    }, [lastValidPoseData, poseToMatch]);
 
     // Calculate overall similarity score
     const overallSimilarity = useMemo(() => {
@@ -84,12 +93,16 @@ export function PoseMatch({
             {poseToMatch ? (
                 <>
                     <div className="pose-display">
-                        <PoseDrawer
-                            poseData={poseData}
-                            width={width}
-                            height={height}
-                            similarityScores={similarityScores}
-                        />
+                        {lastValidPoseData && lastValidPoseData.poseLandmarks ? (
+                            <PoseDrawer
+                                poseData={lastValidPoseData}
+                                width={width}
+                                height={height}
+                                similarityScores={similarityScores}
+                            />
+                        ) : (
+                            <p>Waiting for valid pose data...</p>
+                        )}
                     </div>
                     <div className="similarity-scores">
                         {similarityScores.map(({segment, similarityScore}) => (
