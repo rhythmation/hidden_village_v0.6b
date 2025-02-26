@@ -71,6 +71,9 @@ function Home() {
           <div onClick={handleLogOut} className="home-link">Log Out</div>
           {isAdmin && <Link className="home-link" to="/userManage">User Management</Link>}
           <Link className="home-link" to="/game">Play Game</Link>
+
+          <Link className="home-link" to="/PlaceHolder"> Pose Matching </Link>
+
           {isAdmin && <Link className="home-link" to="/gameEditor">Editor</Link>}
           <Link className="home-link" to="/settings">Settings</Link>
           {isAdmin && (<button onClick={() => setIsModalOpen(true)}>Get Data</button>)}
