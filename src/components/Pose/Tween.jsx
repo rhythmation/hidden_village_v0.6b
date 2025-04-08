@@ -19,10 +19,14 @@ const interpolatePoseData = (startPose, endPose, progress) => {
   }
 
   const result = {
+    faceLandmarks: [],
     image: startPose.image,
+    leftHandLandmarks: [],
+    multiFaceGeometry: [],
     poseLandmarks: [],
     rightHandLandmarks: [],
-    faceLandmarks: [],
+    segmentationMask: [],
+    za: []
   };
 
   // Interpolate pose landmarks
@@ -36,6 +40,12 @@ const interpolatePoseData = (startPose, endPose, progress) => {
   if (startPose.rightHandLandmarks && endPose.rightHandLandmarks) {
     result.rightHandLandmarks = startPose.rightHandLandmarks.map((landmark, i) => 
       interpolateLandmark(landmark, endPose.rightHandLandmarks[i], progress)
+    );
+  }
+
+  if (startPose.leftHandLandmarks && endPose.leftHandLandmarks) {
+    result.leftHandLandmarks = startPose.leftHandLandmarks.map((landmark, i) => 
+      interpolateLandmark(landmark, endPose.leftHandLandmarks[i], progress)
     );
   }
 
@@ -120,6 +130,7 @@ export function Tween({
 
   // If no current pose, use the first pose
   const poseToRender = currentPose || poses[0];
+  
 
   return (
     <div>
