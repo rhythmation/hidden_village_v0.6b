@@ -1,0 +1,82 @@
+.game-menu {
+  padding: 2rem;
+  font-family: 'Inter', sans-serif;
+  color: #000000;
+  min-height: 100vh;
+}
+
+.menu-title {
+  font-size: 2rem;
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: 2rem;
+  color: #000000;
+}
+
+.game-list {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  padding: 0;
+  margin: 0;
+}
+
+.game-card {
+  border: 1px solid #2c2c2c;
+  border-radius: 12px;
+  padding: 1.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+}
+
+.game-card:hover {
+  transform: translateY(-3px);
+}
+
+.game-name {
+  font-size: 1.4rem;
+  margin-bottom: 0.5rem;
+  color: #000000;
+}
+
+.game-author,
+.game-keywords {
+  font-size: 0.95rem;
+  margin: 0.3rem 0;
+  color: #290000;
+}
+
+.status-msg {
+  text-align: center;
+  margin-top: 4rem;
+  font-size: 1.2rem;
+  color: #4000ff;
+}
+
+.error-msg {
+  color: #ff6b6b;
+  text-align: center;
+  margin-top: 2rem;
+}
+
+.game-player-view {
+  padding: 2rem;
+  color: #000000;
+  min-height: 100vh;
+}
+
+.back-btn {
+  border: 1px solid #444;
+  color: #000000;
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-bottom: 1.5rem;
+  transition: all 0.2s;
+}
+
+.back-btn:hover {
+  border-color: #666;
+}
