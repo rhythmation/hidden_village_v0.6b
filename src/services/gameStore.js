@@ -1,227 +1,309 @@
-import { ref, push, getDatabase, set, query, equalTo, get, orderByChild, orderByKey, onValue, child, startAt, endAt, remove, update } from "firebase/database";
-import { getAuth, onAuthStateChanged } from "firebase/auth";
-import { v4 as uuidv4 } from "uuid";
+// src/services/db/gameStore.js
 
-// Get database instance
-const db = getDatabase();
-// Get auth instance
-
-/* 
- * @description Method to get Game names from database for Game Menu
- * @args none
- * @returns
+/**
+ * @typedef {Object} Sprite
+ * @property {string} id
+ * @property {string} name
+ * @property {"character"|"prop"|"ui"|"effect"} type
+ * @property {number} x
+ * @property {number} y
+ * @property {number} [rotation]
+ * @property {number} [scale]
+ * @property {number} [zIndex]
+ * @property {Object} [appearance]
+ * @property {Array<Object>} [behaviors]
+ * @property {Object} [audio]
+ * @property {Object} [meta]
  */
-export const getGamesList = async () => {
-  try {
-    const snapshot = await get(ref(db, 'GameList'));
-    if (!snapshot.exists()) {
-      return { success: true, data: {}, message: "No games found (empty DB)" };
-    }
-    return { success: true, data: snapshot.val() };
-  } catch (error) {
-    console.error("getGamesList error:", error);
-    return { success: false, error: error.message || "Failed to fetch games" };
-  }
-};
 
-/*
- * @description Method to get contents for a specific game 
- * @args id game id
- * @returns
+/**
+ * @typedef {Object} Level
+ * @property {string} id
+ * @property {string} name
+ * @property {string|null} [background]
+ * @property {string[]} [dialogues]
+ * @property {Object} [settings]
+ * @property {Record<string, Sprite>} [sprites]
+ * @property {Object} [audio]
  */
-export const getGameById = async(id) => {
-  
+
+/**
+ * @typedef {Object} GameDoc
+ * @property {string} id
+ * @property {string} name
+ * @property {string} [description]
+ * @property {number} version
+ * @property {Object} [settings]
+ * @property {string[]} [order]              
+ * @property {Record<string, Level>} levels
+ * @property {*} [createdAt]
+ * @property {*} [updatedAt]
+ */
+
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  query,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+  serverTimestamp,
+} from "firebase/firestore";
+import { firebaseDB } from "../Firebase/firebase";
+
+// Helpers to build paths
+const gamesCol = (uid) => collection(firebaseDB, "users", uid, "games");
+const gameDoc = (uid, gameId) => doc(firebaseDB, "users", uid, "games", gameId);
+
+/**
+ * Infer a reasonable default order from the levels object.
+ * Falls back to [] if nothing is there.
+ */
+function inferOrderFromLevels(levels) {
+  if (!levels) return [];
+  const ids = Object.keys(levels);
+  return ids;
 }
 
-/* 
- * @description Method to write a game to the database, probably called on save
- * @args 
- * @returns 
- */
-export const writeGame = async (id, author, name, keywords, isPublished, levelIds, settings) => {
-  // If it is a new game, id is null
-  const gameId = id || uuidv4();
+/** Create a new game (or merge if it exists). */
+export async function createOrMergeGame(uid, game /** @type {Partial<GameDoc>} */) {
+  if (!uid) throw new Error("uid required");
+  if (!game?.id) throw new Error("game.id required");
 
-  try {
-    // If user is trying to publish game with empty fields, throw error.
-    // Only unpublished game fields can be empty.
-    if (isPublished && (!author || !name || !keywords || !settings)) {
-      return {
-        success: false,
-        status: 400,
-        message: "Missing required fields for published game.",
-      };
-    }
+  const ref = gameDoc(uid, game.id);
+  const existingSnap = await getDoc(ref);
+  const now = serverTimestamp();
 
-    // Batch updates together as this is an expensive operation.
-    const updates = {
-      [`GameList/${gameId}`]: { author, name, keywords, isPublished },
-      [`Games/${gameId}`]: { author, name, keywords, isPublished, levelIds, settings },
-    };
-    await update(ref(db), updates);
+  const baseLevels = game.levels || {};
+  const baseOrder =
+    Array.isArray(game.order) && game.order.length
+      ? game.order
+      : inferOrderFromLevels(baseLevels);
 
+  const defaults = {
+    version: 1,
+    description: "",
+    settings: {},
+    order: baseOrder,
+    levels: baseLevels,
+  };
+
+  const payload = {
+    ...defaults,
+    ...game,
+    // Only set createdAt the first time
+    ...(existingSnap.exists() ? {} : { createdAt: now }),
+    updatedAt: now,
+  };
+
+  await setDoc(ref, payload, { merge: true });
+  return ref.id;
+}
+
+/** Load a single game doc. */
+export async function loadGame(uid, gameId) {
+  if (!uid || !gameId) throw new Error("uid and gameId required");
+  const snap = await getDoc(gameDoc(uid, gameId));
+  return snap.exists() ? /** @type {GameDoc} */ (snap.data()) : null;
+}
+
+/** Convenience: load a single level from a game doc. */
+export async function loadLevel(uid, gameId, levelId) {
+  if (!uid || !gameId || !levelId) {
+    throw new Error("uid, gameId and levelId required");
+  }
+  const game = await loadGame(uid, gameId);
+  return game?.levels?.[levelId] || null;
+}
+
+/** List game headers for a user (id + name, sorted by updatedAt desc if present). */
+export async function listGames(uid) {
+  if (!uid) throw new Error("uid required");
+  const q = query(gamesCol(uid));
+  const snap = await getDocs(q);
+
+  const games = snap.docs.map((d) => {
+    const data = d.data();
+    const { name, updatedAt } = data;
     return {
-      success: true,
-      status: 200,
-      message: "Game saved successfully.",
-      data: { gameId },
+      id: d.id, // always have an id, even if it's not stored in the document
+      name,
+      updatedAt: updatedAt || null,
     };
-  } catch (error) {
-    console.error("writeGame error:", error);
-    return {
-      success: false,
-      status: 500,
-      message: "Failed to save game.",
-      error: {
-        code: error.code || "FIREBASE_WRITE_ERROR",
-        details: error.message,
-        stack: error.stack,
-      },
-    };
-  }
-};
+  });
 
-/* 
- * 
- *
- */
-export const getLevelList = async() => {
+  // Optional: sort by updatedAt (newest first), nulls last
+  games.sort((a, b) => {
+    if (!a.updatedAt && !b.updatedAt) return 0;
+    if (!a.updatedAt) return 1;
+    if (!b.updatedAt) return -1;
+    // Firestore Timestamp has a compareTo method, but in JS we can compare seconds/nanoseconds
+    const aSec = a.updatedAt.seconds ?? 0;
+    const bSec = b.updatedAt.seconds ?? 0;
+    if (aSec !== bSec) return bSec - aSec;
+    const aNano = a.updatedAt.nanoseconds ?? 0;
+    const bNano = b.updatedAt.nanoseconds ?? 0;
+    return bNano - aNano;
+  });
+
+  return games;
+}
+
+/** Update shallow game fields (name, description, settings, order, etc.). */
+export async function updateGameMeta(uid, gameId, patch) {
+  if (!uid || !gameId) throw new Error("uid and gameId required");
+
+  // Prevent accidental overwrite of id/levels via meta API
+  const { id, levels, ...rest } = patch || {};
+  await updateDoc(gameDoc(uid, gameId), {
+    ...rest,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/** Upsert a whole level under levels.{levelId}. */
+export async function upsertLevel(uid, gameId, level /** @type {Level} */) {
+  if (!uid || !gameId) throw new Error("uid and gameId required");
+  if (!level?.id) throw new Error("level.id required");
+
+  const path = `levels.${level.id}`;
+  await updateDoc(gameDoc(uid, gameId), {
+    [path]: level,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/** Patch a level (only given keys) using current doc merge. */
+export async function patchLevel(
+  uid,
+  gameId,
+  levelId,
+  patch /** @type {Partial<Level>} */
+) {
+  if (!uid || !gameId || !levelId) {
+    throw new Error("uid, gameId and levelId required");
+  }
+
+  const path = `levels.${levelId}`;
+  const current = await loadGame(uid, gameId);
+  const merged = { ...(current?.levels?.[levelId] || { id: levelId }), ...patch };
+
+  await updateDoc(gameDoc(uid, gameId), {
+    [path]: merged,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/** Upsert a sprite: levels.{levelId}.sprites.{spriteId} = sprite */
+export async function upsertSprite(
+  uid,
+  gameId,
+  levelId,
+  sprite /** @type {Sprite} */
+) {
+  if (!uid || !gameId || !levelId) {
+    throw new Error("uid, gameId and levelId required");
+  }
+  if (!sprite?.id) throw new Error("sprite.id required");
+
+  const path = `levels.${levelId}.sprites.${sprite.id}`;
+  await updateDoc(gameDoc(uid, gameId), {
+    [path]: sprite,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/** Patch a sprite via nested dot-path. */
+export async function patchSprite(
+  uid,
+  gameId,
+  levelId,
+  spriteId,
+  patch /** @type {Partial<Sprite>} */
+) {
+  if (!uid || !gameId || !levelId || !spriteId) {
+    throw new Error("uid, gameId, levelId and spriteId required");
+  }
+
+  const path = `levels.${levelId}.sprites.${spriteId}`;
+  const current = await loadGame(uid, gameId);
+  const base = current?.levels?.[levelId]?.sprites?.[spriteId] || { id: spriteId };
+
+  await updateDoc(gameDoc(uid, gameId), {
+    [path]: { ...base, ...patch },
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/** Remove a sprite. */
+export async function deleteSprite(uid, gameId, levelId, spriteId) {
+  if (!uid || !gameId || !levelId || !spriteId) {
+    throw new Error("uid, gameId, levelId and spriteId required");
+  }
+
+  const game = await loadGame(uid, gameId);
+  if (!game?.levels?.[levelId]?.sprites?.[spriteId]) return;
+
+  const level = { ...game.levels[levelId] };
+  const { [spriteId]: _removed, ...rest } = level.sprites || {};
+
+  await patchLevel(uid, gameId, levelId, { sprites: rest });
+}
+
+/** Delete a level. */
+export async function deleteLevel(uid, gameId, levelId) {
+  if (!uid || !gameId || !levelId) {
+    throw new Error("uid, gameId and levelId required");
+  }
+
+  const game = await loadGame(uid, gameId);
+  if (!game?.levels?.[levelId]) return;
+
+  const { [levelId]: _removed, ...rest } = game.levels;
+  const newOrder = (game.order || []).filter((id) => id !== levelId);
+
+  await updateDoc(gameDoc(uid, gameId), {
+    levels: rest,
+    order: newOrder,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/** Delete an entire game. */
+export async function deleteGame(uid, gameId) {
+  if (!uid || !gameId) throw new Error("uid and gameId required");
+  await deleteDoc(gameDoc(uid, gameId));
+}
+
+/** Local draft helpers (safe offline fallback). */
+const DRAFT_KEY = (uid, gameId) => `hv:draft:${uid}:${gameId}`;
+
+export function saveDraft(uid, gameId, data /** @type {GameDoc} */) {
+  if (typeof window === "undefined" || typeof localStorage === "undefined") {
+    return;
+  }
+  localStorage.setItem(DRAFT_KEY(uid, gameId), JSON.stringify(data));
+}
+
+export function loadDraft(uid, gameId) {
+  if (typeof window === "undefined" || typeof localStorage === "undefined") {
+    return null;
+  }
+
+  const raw = localStorage.getItem(DRAFT_KEY(uid, gameId));
   try {
-    const snapshot = await get(ref(db, 'LevelList'));
-    if (!snapshot.exists()) {
-      return { success: true, data: {}, message: "No levels found (empty DB)" };
-    }
-    return { success: true, data: snapshot.val() };
-  } catch (error) {
-    console.error("getLevelList error:", error);
-    return { success: false, error: error.message || "Failed to fetch levels" };
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
   }
 }
 
-/* 
- * 
- *
- */
-export const getLevelById = async() => {
-  
+/** Export helpers */
+export function gameToJSONBlob(game /** @type {GameDoc} */) {
+  const blob = new Blob([JSON.stringify(game, null, 2)], {
+    type: "application/json",
+  });
+  return blob;
 }
-
-/* 
- *
- *
- */
-export const writeLevel = async (id, author, name, keywords, poses, description, question, options, answers, isPublished) => {
-  // if new level, id is null
-  const levelId = id || uuidv4();
-
-  try {
-    // If user is trying to publish level with empty fields, throw error.
-    // Only unpublished level fields can be empty.
-    if (isPublished && (!author || !name || !poses || !question || !options || !answers)) {
-      return { success: false, error: "Missing required fields for published level." };
-    }
-
-    const updates = {
-      [`LevelList/${levelId}`]: { author, name, keywords, isPublished },
-      [`Level/${levelId}`]: { author, name, keywords, isPublished, poses, description, question, options, answers },
-    };
-    await update(ref(db), updates);
-
-    return { success: true, data: { levelId }, message: "Level saved successfully" };
-  } catch (error) {
-    console.error("writeLevel error:", error);
-    return { success: false, error: error.message || "Failed to save level" };
-  }
-};
-
-/* 
- * 
- *
- */
-export const deleteGameById = async(id) => {
-  
-}
-
-/* 
- * 
- *
- */
-export const searchGameById = async(id) => {
-  // we will have entire games list in the game menu, 
-  // so implement regex simply from the menu, 
-  // shift it to GameMenu.jsx file
-}
-
-/* 
- * 
- *
- */
-export const searchLevelById = async(id) => {
-  // we will have entire levels list in the level menu, 
-  // so implement regex simply from the menu, 
-  // shift it to that file
-}
-
-/* 
- * 
- *
- */
-export const deleteLevelById = async(id) => {
-  
-}
-
-
-
-// More functions and updates needed:
-// Add functions to record video, capture pose and record other data while playing game
-//
-// Add story, pictures etc fields for each game
-//
-// Games will only have level id attached to maintain fresh data and remove duplicate update,
-// if needed create level id to name mapping to implement level menu for a specific game
-//
-// store the list of created game/level ids of each user as their field
-// so that we can look it up quickly and enforce new games/levels created have distinct names
-// SEE if firebase rules can implement that uniqueness for us
-
-
-
-
-
-// Example: Auto-create a dummy unpublished game
-          /* const dummyGame = {
-            id: null,
-            author: user.email,
-            name: "Hidden Village Prototype",
-            keywords: ["test", "prototype", "demo"],
-            isPublished: false,
-            levelIds: {
-              level1: { name: "Forest Entrance", difficulty: "Easy" },
-              level2: { name: "Mountain Path", difficulty: "Medium" }
-            },
-            settings: {
-              difficulty: "Normal",
-              maxPlayers: 1,
-              environment: "Fantasy"
-            }
-          };
-
-          try {
-            const result = await writeGame(
-              dummyGame.id,
-              dummyGame.author,
-              dummyGame.name,
-              dummyGame.keywords,
-              dummyGame.isPublished,
-              dummyGame.levelIds,
-              dummyGame.settings
-            );
-            console.log("Auto-created dummy game:", result);
-          } catch (error) {
-            console.error("Failed to auto-create dummy game:", error);
-          } */
-
-
-
-
-
