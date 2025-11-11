@@ -1,5 +1,7 @@
-import {initializeApp } from "firebase/app"
-import {getAuth, onAuthStateChanged} from "firebase/auth"
+// src/Firebase/firebase.js  (keep this path the same as before)
+
+import { initializeApp } from "firebase/app";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -13,11 +15,13 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_MEASUREMENT_ID,
 };
 
+// Tiny debug log so we can see if envs are actually loaded
+console.log("firebaseConfig at init:", firebaseConfig);
+
 const firebaseInstance = initializeApp(firebaseConfig);
 
 const auth = getAuth(firebaseInstance);
 
-const firebaseDB = getFirestore(firebaseInstance)
+const firebaseDB = getFirestore(firebaseInstance);
 
 export { firebaseInstance, auth, firebaseDB };
-

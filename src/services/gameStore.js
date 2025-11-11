@@ -1,33 +1,29 @@
+// src/services/gameStore.js
 
 import {
   ref,
   push,
   getDatabase,
-  set,
-  query,
-  equalTo,
   get,
-  orderByChild,
-  startAt,
-  endAt,
-  remove,
   update,
 } from "firebase/database";
-import { v4 as uuidv4 } from "uuid";
 
-// Get database instance
+// Get database instance *for our initialized app*
 const db = getDatabase();
-
 /*
- * @description Method to get Game names from database for Game Menu
+ * @description Get Game names from database for Game Menu
  * @args none
- * @returns {Promise<{success: boolean, data?: Record<string, any>, message?: string, error?: any}>}
+ * @returns { success, data, message? } where data is the GameList object
  */
 export const getGamesList = async () => {
   try {
     const snapshot = await get(ref(db, "GameList"));
     if (!snapshot.exists()) {
-      return { success: true, data: {}, message: "No games found (empty DB)" };
+      return {
+        success: true,
+        data: {},
+        message: "No games found (empty DB)",
+      };
     }
     return { success: true, data: snapshot.val() };
   } catch (error) {
@@ -40,8 +36,7 @@ export const getGamesList = async () => {
 };
 
 /*
- * @description Get contents for a specific game
- * @args id game id
+ * @description Get contents for a specific game by id
  */
 export const getGameById = async (id) => {
   if (!id) {
@@ -81,7 +76,14 @@ export const getGameById = async (id) => {
 
 /*
  * @description Write a game to the database, probably called on save
- * @args id (nullable), author, name, keywords, isPublished, levelIds, settings
+ * @args
+ *   id           - existing game id or null for new
+ *   author       - string
+ *   name         - string
+ *   keywords     - string or array
+ *   isPublished  - boolean
+ *   levelIds     - array of level ids
+ *   settings     - arbitrary object
  */
 export const writeGame = async (
   id,
@@ -92,8 +94,8 @@ export const writeGame = async (
   levelIds,
   settings
 ) => {
-  // If it is a new game, id is null
-  const gameId = id || uuidv4();
+  // If it is a new game, generate a Firebase key
+  const gameId = id || push(ref(db, "Games")).key;
 
   try {
     // If user is trying to publish game with empty fields, throw error.
@@ -205,7 +207,17 @@ export const getLevelById = async (id) => {
 
 /*
  * @description Write / update a level
- * @args id (nullable), author, name, keywords, poses, description, question, options, answers, isPublished
+ * @args
+ *   id           - existing level id or null for new
+ *   author       - string
+ *   name         - string
+ *   keywords     - string or array
+ *   poses        - pose data
+ *   description  - string
+ *   question     - string
+ *   options      - array
+ *   answers      - array
+ *   isPublished  - boolean
  */
 export const writeLevel = async (
   id,
@@ -219,8 +231,8 @@ export const writeLevel = async (
   answers,
   isPublished
 ) => {
-  // if new level, id is null
-  const levelId = id || uuidv4();
+  // if new level, generate a Firebase key
+  const levelId = id || push(ref(db, "Level")).key;
 
   try {
     // If user is trying to publish level with empty fields, throw error.
@@ -302,7 +314,7 @@ export const deleteGameById = async (id) => {
 
 /*
  * @description Simple search alias: for now just reuse getGameById.
- * In UI, we already filter the full list; this is mostly a placeholder.
+ * In the UI we already filter full lists in the menu.
  */
 export const searchGameById = async (id) => {
   return getGameById(id);
@@ -349,5 +361,3 @@ export const deleteLevelById = async (id) => {
     };
   }
 };
-
-
