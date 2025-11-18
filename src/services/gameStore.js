@@ -4,15 +4,26 @@ import {
   getDatabase,
   get,
   update,
+  set
 } from "firebase/database";
+import { 
+  getStorage, 
+  ref as storageRef, 
+  uploadBytes, 
+  getDownloadURL 
+} from "firebase/storage";
 
-// Get database instance *for our initialized app*
+// Get database and storage instances
 const db = getDatabase();
+const storage = getStorage();
 
-/*
- * @description Get Game names from database for Game Menu
- * @args none
- * @returns { success, data, message? } where data is the GameList object
+// ============================================
+// GAME FUNCTIONS
+// ============================================
+
+/**
+ * Get all games from database for Game Menu
+ * @returns { success, data, message? }
  */
 export const getGamesList = async () => {
   try {
@@ -34,8 +45,10 @@ export const getGamesList = async () => {
   }
 };
 
-/*
- * @description Get contents for a specific game by id
+/**
+ * Get specific game by id
+ * @param {string} id - Game ID
+ * @returns { success, status, data?, message?, error? }
  */
 export const getGameById = async (id) => {
   if (!id) {
@@ -73,16 +86,16 @@ export const getGameById = async (id) => {
   }
 };
 
-/*
- * @description Write a game to the database, probably called on save
- * @args
- *   id           - existing game id or null for new
- *   author       - string
- *   name         - string
- *   keywords     - string or array
- *   isPublished  - boolean
- *   levelIds     - array of level ids
- *   settings     - arbitrary object
+/**
+ * Write/update a game to the database
+ * @param {string|null} id - Existing game id or null for new
+ * @param {string} author - Author email/name
+ * @param {string} name - Game name
+ * @param {string|array} keywords - Search keywords
+ * @param {boolean} isPublished - Published status
+ * @param {array} levelIds - Array of level IDs
+ * @param {object} settings - Game settings
+ * @returns { success, status, message, data? }
  */
 export const writeGame = async (
   id,
@@ -93,12 +106,9 @@ export const writeGame = async (
   levelIds,
   settings
 ) => {
-  // If it is a new game, generate a Firebase key
   const gameId = id || push(ref(db, "Games")).key;
 
   try {
-    // If user is trying to publish game with empty fields, throw error.
-    // Only unpublished game fields can be empty.
     if (isPublished && (!author || !name || !keywords || !settings)) {
       return {
         success: false,
@@ -107,7 +117,6 @@ export const writeGame = async (
       };
     }
 
-    // Batch updates together as this is an expensive operation.
     const updates = {
       [`GameList/${gameId}`]: { author, name, keywords, isPublished },
       [`Games/${gameId}`]: {
@@ -142,8 +151,50 @@ export const writeGame = async (
   }
 };
 
-/*
- * @description Get all levels (for Level Menu / editor UI)
+/**
+ * Delete a game by id
+ * @param {string} id - Game ID to delete
+ * @returns { success, status, message }
+ */
+export const deleteGameById = async (id) => {
+  if (!id) {
+    return {
+      success: false,
+      status: 400,
+      message: "Missing game id.",
+    };
+  }
+
+  try {
+    const updates = {
+      [`GameList/${id}`]: null,
+      [`Games/${id}`]: null,
+    };
+    await update(ref(db), updates);
+
+    return {
+      success: true,
+      status: 200,
+      message: "Game deleted successfully.",
+    };
+  } catch (error) {
+    console.error("deleteGameById error:", error);
+    return {
+      success: false,
+      status: 500,
+      message: "Failed to delete game.",
+      error: error?.message || error,
+    };
+  }
+};
+
+// ============================================
+// LEVEL FUNCTIONS
+// ============================================
+
+/**
+ * Get all levels for Level Menu
+ * @returns { success, data, message?, error? }
  */
 export const getLevelList = async () => {
   try {
@@ -165,8 +216,10 @@ export const getLevelList = async () => {
   }
 };
 
-/*
- * @description Get a single level by id
+/**
+ * Get specific level by id
+ * @param {string} id - Level ID
+ * @returns { success, status, data?, message?, error? }
  */
 export const getLevelById = async (id) => {
   if (!id) {
@@ -204,19 +257,19 @@ export const getLevelById = async (id) => {
   }
 };
 
-/*
- * @description Write / update a level
- * @args
- *   id           - existing level id or null for new
- *   author       - string
- *   name         - string
- *   keywords     - string or array
- *   poses        - pose data
- *   description  - string
- *   question     - string
- *   options      - array
- *   answers      - array
- *   isPublished  - boolean
+/**
+ * Write/update a level
+ * @param {string|null} id - Existing level id or null for new
+ * @param {string} author - Author email/name
+ * @param {string} name - Level name
+ * @param {string|array} keywords - Search keywords
+ * @param {object} poses - Pose data
+ * @param {string} description - Level description
+ * @param {string} question - Quiz question
+ * @param {array} options - Quiz options
+ * @param {array} answers - Correct answers
+ * @param {boolean} isPublished - Published status
+ * @returns { success, data?, message, error? }
  */
 export const writeLevel = async (
   id,
@@ -230,12 +283,9 @@ export const writeLevel = async (
   answers,
   isPublished
 ) => {
-  // if new level, generate a Firebase key
   const levelId = id || push(ref(db, "Level")).key;
 
   try {
-    // If user is trying to publish level with empty fields, throw error.
-    // Only unpublished level fields can be empty.
     if (
       isPublished &&
       (!author || !name || !poses || !question || !options || !answers)
@@ -276,43 +326,10 @@ export const writeLevel = async (
   }
 };
 
-/*
- * @description Delete a game by id (removes from GameList and Games)
- */
-export const deleteGameById = async (id) => {
-  if (!id) {
-    return {
-      success: false,
-      status: 400,
-      message: "Missing game id.",
-    };
-  }
-
-  try {
-    const updates = {
-      [`GameList/${id}`]: null,
-      [`Games/${id}`]: null,
-    };
-    await update(ref(db), updates);
-
-    return {
-      success: true,
-      status: 200,
-      message: "Game deleted successfully.",
-    };
-  } catch (error) {
-    console.error("deleteGameById error:", error);
-    return {
-      success: false,
-      status: 500,
-      message: "Failed to delete game.",
-      error: error?.message || error,
-    };
-  }
-};
-
-/*
- * @description Delete a level by id (removes from LevelList and Level)
+/**
+ * Delete a level by id
+ * @param {string} id - Level ID to delete
+ * @returns { success, status, message }
  */
 export const deleteLevelById = async (id) => {
   if (!id) {
@@ -346,10 +363,572 @@ export const deleteLevelById = async (id) => {
   }
 };
 
+// ============================================
+// GAMEPLAY SESSION FUNCTIONS
+// ============================================
+
+/**
+ * Write batch of frame data for a gameplay session
+ * Uses efficient batch writes without reading entire array
+ * Path: UserGameplay/{userId}/games/{gameId}/levels/{levelId}/sessions/{sessionId}/frames/{frameIndex}
+ * @param {string} userId - User ID
+ * @param {string} gameId - Game ID
+ * @param {string} levelId - Level ID
+ * @param {string} sessionId - Session ID
+ * @param {array} framesBatch - Array of frame data
+ * @param {number} startIndex - Starting frame index for this batch
+ * @returns { success, nextIndex?, error? }
+ */
+export const writeGameplayFrames = async (
+  userId,
+  gameId,
+  levelId,
+  sessionId,
+  framesBatch,
+  startIndex
+) => {
+  if (!userId || !gameId || !levelId || !sessionId || !framesBatch || framesBatch.length === 0 || startIndex === undefined) {
+    return { success: false, error: "Invalid parameters" };
+  }
+
+  try {
+    // Build update object with indexed keys (no read required!)
+    const updates = {};
+    framesBatch.forEach((frame, index) => {
+      const frameIndex = startIndex + index;
+      updates[`UserGameplay/${userId}/games/${gameId}/levels/${levelId}/sessions/${sessionId}/frames/${frameIndex}`] = frame;
+    });
+    
+    // Single atomic write for all frames in batch
+    await update(ref(db), updates);
+
+    return { 
+      success: true, 
+      nextIndex: startIndex + framesBatch.length
+    };
+  } catch (error) {
+    console.error("writeGameplayFrames error:", error);
+    return { success: false, error: error?.message };
+  }
+};
+
+/**
+ * Upload video to Firebase Storage (NOT Realtime Database - videos are too large)
+ * @param {string} userId - User ID
+ * @param {string} gameId - Game ID
+ * @param {string} levelId - Level ID
+ * @param {string} sessionId - Session ID
+ * @param {Blob} videoBlob - Video blob data
+ * @returns { success, url?, error? }
+ */
+export const uploadGameplayVideo = async (
+  userId,
+  gameId,
+  levelId,
+  sessionId,
+  videoBlob
+) => {
+  if (!userId || !gameId || !levelId || !sessionId || !videoBlob) {
+    return { success: false, error: "Invalid parameters" };
+  }
+
+  try {
+    const videoPath = `gameplay-videos/${userId}/${gameId}/${levelId}/${sessionId}.webm`;
+    const videoRef = storageRef(storage, videoPath);
+
+    // Upload video to Storage
+    await uploadBytes(videoRef, videoBlob);
+
+    // Get download URL
+    const downloadURL = await getDownloadURL(videoRef);
+
+    // Store URL reference in Realtime Database
+    await set(
+      ref(db, `UserGameplay/${userId}/games/${gameId}/levels/${levelId}/sessions/${sessionId}/video`),
+      {
+        url: downloadURL,
+        path: videoPath,
+        uploadedAt: Date.now(),
+      }
+    );
+
+    return { success: true, url: downloadURL };
+  } catch (error) {
+    console.error("uploadGameplayVideo error:", error);
+    return { success: false, error: error?.message };
+  }
+};
+
+/**
+ * Write gameplay session metadata
+ * @param {string} userId - User ID
+ * @param {string} gameId - Game ID
+ * @param {string} levelId - Level ID
+ * @param {string} sessionId - Session ID
+ * @param {string} deviceId - Device identifier (browser fingerprint, device UUID, etc.)
+ * @param {object} sessionData - Session metadata (score, duration, etc.)
+ * @returns { success, error? }
+ */
+export const writeGameSession = async (
+  userId,
+  gameId,
+  levelId,
+  sessionId,
+  deviceId,
+  sessionData
+) => {
+  if (!userId || !sessionId || !deviceId || !sessionData) {
+    return { success: false, error: "Invalid parameters" };
+  }
+
+  try {
+    await set(
+      ref(db, `UserGameplay/${userId}/sessions/${sessionId}/metadata`),
+      {
+        gameId,
+        levelId,
+        deviceId, // Track which device played
+        ...sessionData,
+        createdAt: Date.now(),
+      }
+    );
+
+    return { success: true };
+  } catch (error) {
+    console.error("writeGameSession error:", error);
+    return { success: false, error: error?.message };
+  }
+};
+
+/**
+ * Get all gameplay sessions for a user
+ * @param {string} userId - User ID
+ * @returns { success, data?, error? }
+ */
+export const getUserGameplaySessions = async (userId) => {
+  if (!userId) {
+    return { success: false, error: "Missing userId" };
+  }
+
+  try {
+    const snapshot = await get(ref(db, `UserGameplay/${userId}/sessions`));
+
+    if (!snapshot.exists()) {
+      return { success: true, data: {} };
+    }
+
+    return { success: true, data: snapshot.val() };
+  } catch (error) {
+    console.error("getUserGameplaySessions error:", error);
+    return { success: false, error: error?.message };
+  }
+};
+
+/**
+ * Get specific session data including all frames and video
+ * @param {string} userId - User ID
+ * @param {string} sessionId - Session ID
+ * @returns { success, data?, error? }
+ */
+export const getSessionById = async (userId, sessionId) => {
+  if (!userId || !sessionId) {
+    return { success: false, error: "Missing parameters" };
+  }
+
+  try {
+    const snapshot = await get(
+      ref(db, `UserGameplay/${userId}/sessions/${sessionId}`)
+    );
+
+    if (!snapshot.exists()) {
+      return { success: false, error: "Session not found" };
+    }
+
+    const sessionData = snapshot.val();
+    
+    // Convert frames object to sorted array for easy playback
+    if (sessionData.frames) {
+      const framesObj = sessionData.frames;
+      sessionData.frames = Object.keys(framesObj)
+        .map(key => parseInt(key))
+        .sort((a, b) => a - b)
+        .map(index => framesObj[index]);
+    }
+
+    return { success: true, data: sessionData };
+  } catch (error) {
+    console.error("getSessionById error:", error);
+    return { success: false, error: error?.message };
+  }
+};
+
+/**
+ * Get frame range from a session (for efficient partial loading)
+ * @param {string} userId - User ID
+ * @param {string} sessionId - Session ID
+ * @param {number} startFrame - Starting frame index
+ * @param {number} endFrame - Ending frame index
+ * @returns { success, data?, error? }
+ */
+export const getSessionFrameRange = async (userId, sessionId, startFrame, endFrame) => {
+  if (!userId || !sessionId || startFrame === undefined || endFrame === undefined) {
+    return { success: false, error: "Missing parameters" };
+  }
+
+  try {
+    const frames = [];
+    
+    // Query specific frame range
+    for (let i = startFrame; i <= endFrame; i++) {
+      const snapshot = await get(
+        ref(db, `UserGameplay/${userId}/sessions/${sessionId}/frames/${i}`)
+      );
+      if (snapshot.exists()) {
+        frames.push(snapshot.val());
+      }
+    }
+
+    return { success: true, data: frames };
+  } catch (error) {
+    console.error("getSessionFrameRange error:", error);
+    return { success: false, error: error?.message };
+  }
+};
+
+/**
+ * Get total frame count for a session
+ * @param {string} userId - User ID
+ * @param {string} sessionId - Session ID
+ * @returns { success, count?, error? }
+ */
+export const getSessionFrameCount = async (userId, sessionId) => {
+  if (!userId || !sessionId) {
+    return { success: false, error: "Missing parameters" };
+  }
+
+  try {
+    const snapshot = await get(
+      ref(db, `UserGameplay/${userId}/sessions/${sessionId}/metadata/totalFrames`)
+    );
+
+    if (!snapshot.exists()) {
+      return { success: false, error: "Frame count not found" };
+    }
+
+    return { success: true, count: snapshot.val() };
+  } catch (error) {
+    console.error("getSessionFrameCount error:", error);
+    return { success: false, error: error?.message };
+  }
+};
+
+/**
+ * Get session metadata only (without frames - lighter query)
+ * @param {string} userId - User ID
+ * @param {string} sessionId - Session ID
+ * @returns { success, data?, error? }
+ */
+export const getSessionMetadata = async (userId, sessionId) => {
+  if (!userId || !sessionId) {
+    return { success: false, error: "Missing parameters" };
+  }
+
+  try {
+    const snapshot = await get(
+      ref(db, `UserGameplay/${userId}/sessions/${sessionId}/metadata`)
+    );
+
+    if (!snapshot.exists()) {
+      return { success: false, error: "Session metadata not found" };
+    }
+
+    return { success: true, data: snapshot.val() };
+  } catch (error) {
+    console.error("getSessionMetadata error:", error);
+    return { success: false, error: error?.message };
+  }
+};
+
+/**
+ * Delete a gameplay session
+ * @param {string} userId - User ID
+ * @param {string} sessionId - Session ID
+ * @returns { success, error? }
+ */
+export const deleteSession = async (userId, sessionId) => {
+  if (!userId || !sessionId) {
+    return { success: false, error: "Missing parameters" };
+  }
+
+  try {
+    // Delete from Realtime Database
+    await set(ref(db, `UserGameplay/${userId}/sessions/${sessionId}`), null);
+
+    // Note: You may also want to delete the video from Storage
+    // This requires getting the video path first, then using deleteObject()
+    
+    return { success: true };
+  } catch (error) {
+    console.error("deleteSession error:", error);
+    return { success: false, error: error?.message };
+  }
+};
+
+// ============================================
+// USER STATISTICS FUNCTIONS
+// ============================================
+
+/**
+ * Update user statistics (scores, achievements, etc.)
+ * @param {string} userId - User ID
+ * @param {object} stats - Statistics object
+ * @returns { success, error? }
+ */
+export const updateUserStats = async (userId, stats) => {
+  if (!userId || !stats) {
+    return { success: false, error: "Missing parameters" };
+  }
+
+  try {
+    await update(ref(db, `UserStats/${userId}`), {
+      ...stats,
+      lastUpdated: Date.now(),
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error("updateUserStats error:", error);
+    return { success: false, error: error?.message };
+  }
+};
+
+/**
+ * Get user statistics
+ * @param {string} userId - User ID
+ * @returns { success, data?, error? }
+ */
+export const getUserStats = async (userId) => {
+  if (!userId) {
+    return { success: false, error: "Missing userId" };
+  }
+
+  try {
+    const snapshot = await get(ref(db, `UserStats/${userId}`));
+
+    if (!snapshot.exists()) {
+      return { success: true, data: {} };
+    }
+
+    return { success: true, data: snapshot.val() };
+  } catch (error) {
+    console.error("getUserStats error:", error);
+    return { success: false, error: error?.message };
+  }
+};
+
+// ============================================
+// LEADERBOARD FUNCTIONS
+// ============================================
+
+/**
+ * Add score to leaderboard
+ * @param {string} gameId - Game ID
+ * @param {string} levelId - Level ID
+ * @param {string} userId - User ID
+ * @param {string} userName - User display name
+ * @param {number} score - Score value
+ * @returns { success, error? }
+ */
+export const addToLeaderboard = async (
+  gameId,
+  levelId,
+  userId,
+  userName,
+  score
+) => {
+  if (!gameId || !levelId || !userId || score === undefined) {
+    return { success: false, error: "Missing parameters" };
+  }
+
+  try {
+    const entryId = push(ref(db, `Leaderboards/${gameId}/${levelId}`)).key;
+
+    await set(ref(db, `Leaderboards/${gameId}/${levelId}/${entryId}`), {
+      userId,
+      userName,
+      score,
+      timestamp: Date.now(),
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error("addToLeaderboard error:", error);
+    return { success: false, error: error?.message };
+  }
+};
+
+/**
+ * Get leaderboard for a level
+ * @param {string} gameId - Game ID
+ * @param {string} levelId - Level ID
+ * @param {number} limit - Number of top scores to return (optional)
+ * @returns { success, data?, error? }
+ */
+export const getLeaderboard = async (gameId, levelId, limit = 100) => {
+  if (!gameId || !levelId) {
+    return { success: false, error: "Missing parameters" };
+  }
+
+  try {
+    const snapshot = await get(ref(db, `Leaderboards/${gameId}/${levelId}`));
+
+    if (!snapshot.exists()) {
+      return { success: true, data: [] };
+    }
+
+    // Convert to array and sort by score
+    const entries = Object.entries(snapshot.val()).map(([id, data]) => ({
+      id,
+      ...data,
+    }));
+
+    entries.sort((a, b) => b.score - a.score);
+
+    return { success: true, data: entries.slice(0, limit) };
+  } catch (error) {
+    console.error("getLeaderboard error:", error);
+    return { success: false, error: error?.message };
+  }
+};
+
+// ============================================
+// DEVICE TRACKING FUNCTIONS
+// ============================================
+
+/**
+ * Get or create a unique device ID for this browser/device
+ * Uses browser fingerprinting to identify device
+ * @returns {string} Device ID
+ */
+export const getDeviceId = () => {
+  // Check if device ID already exists in localStorage
+  let deviceId = localStorage.getItem('deviceId');
+  
+  if (!deviceId) {
+    // Generate device fingerprint based on browser/device characteristics
+    const fingerprint = [
+      navigator.userAgent,
+      navigator.language,
+      screen.width,
+      screen.height,
+      screen.colorDepth,
+      new Date().getTimezoneOffset(),
+      navigator.hardwareConcurrency,
+      navigator.deviceMemory,
+    ].join('|');
+    
+    // Create hash of fingerprint + random component for uniqueness
+    deviceId = `device_${btoa(fingerprint).substring(0, 20)}_${Date.now()}`;
+    localStorage.setItem('deviceId', deviceId);
+  }
+  
+  return deviceId;
+};
+
+/**
+ * Get device information
+ * @returns {object} Device details
+ */
+export const getDeviceInfo = () => {
+  return {
+    deviceId: getDeviceId(),
+    userAgent: navigator.userAgent,
+    platform: navigator.platform,
+    language: navigator.language,
+    screenResolution: `${screen.width}x${screen.height}`,
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+  };
+};
+
+/**
+ * Get all sessions for a specific device
+ * @param {string} userId - User ID
+ * @param {string} deviceId - Device ID
+ * @returns { success, data?, error? }
+ */
+export const getDeviceSessions = async (userId, deviceId) => {
+  if (!userId || !deviceId) {
+    return { success: false, error: "Missing parameters" };
+  }
+
+  try {
+    const snapshot = await get(ref(db, `UserGameplay/${userId}/sessions`));
+
+    if (!snapshot.exists()) {
+      return { success: true, data: [] };
+    }
+
+    // Filter sessions by device
+    const allSessions = snapshot.val();
+    const deviceSessions = Object.entries(allSessions)
+      .filter(([_, session]) => session.metadata?.deviceId === deviceId)
+      .map(([sessionId, sessionData]) => ({ sessionId, ...sessionData }));
+
+    return { success: true, data: deviceSessions };
+  } catch (error) {
+    console.error("getDeviceSessions error:", error);
+    return { success: false, error: error?.message };
+  }
+};
+
+// ============================================
+// EXPORT ALL FUNCTIONS
+// ============================================
+
+export default {
+  // Game functions
+  getGamesList,
+  getGameById,
+  writeGame,
+  deleteGameById,
+  
+  // Level functions
+  getLevelList,
+  getLevelById,
+  writeLevel,
+  deleteLevelById,
+  
+  // Gameplay session functions
+  writeGameplayFrames,
+  uploadGameplayVideo,
+  writeGameSession,
+  getUserGameplaySessions,
+  getSessionById,
+  getSessionFrameRange,
+  getSessionFrameCount,
+  getSessionMetadata,
+  deleteSession,
+  
+  // User stats
+  updateUserStats,
+  getUserStats,
+  
+  // Leaderboard
+  addToLeaderboard,
+  getLeaderboard,
+  
+  // Device tracking
+  getDeviceId,
+  getDeviceInfo,
+  getDeviceSessions,
+};
 
 
+// --------------------------- USER STATISTICS --------------------------- //
 
 // More functions and updates needed:
+// Functions should authenticate and authorize user before critical database calls like delete, admins may be given the supreme power to override
+//
 // Search game by name would be implemented by filtering the list we get in menu, we will not make database calls/
 // Add functions to record video, capture pose and record other data while playing game
 //
@@ -361,6 +940,8 @@ export const deleteLevelById = async (id) => {
 // store the list of created game/level ids of each user as their field
 // so that we can look it up quickly and enforce new games/levels created have distinct names
 // SEE if firebase rules can implement that uniqueness for us
+//
+// We batch updates together to save performance
 
 
 
