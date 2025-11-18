@@ -4,6 +4,7 @@ import Layout from "./components/Layout.jsx";
 import Home from "./pages/Home/home.jsx";
 import GameMenu from "./pages/GameMenu/GameMenu.jsx";
 import GameEditor from "./pages/GameEditor/gameEditor.jsx";
+import GamePlayer from "./components/Game/GamePlayer.jsx";
 import Settings from "./pages/settings/settings.jsx";
 import SignIn from "./pages/Auth/signIn/signIn.jsx";
 import UserManage from "./pages/UserManage/UserManage.jsx";
@@ -46,13 +47,18 @@ const App = () => {
           {/* Protect routes based on login status */}
           <Route element={<ProtectedRoute loginStatus={isLoggedIn} />}>
             <Route path="/" element={<Home />} />
-            <Route path="/game" element={<GameMenu />} />
+
+            <Route path="/play" element={<GameMenu mode="play" />} />
+            <Route path="/play/:gameId" element={<GamePlayer />} />
+
+            <Route path="/edit" element={<GameMenu mode="edit" />} />
+            <Route path="/edit/:gameId" element={<GameEditor />} />
+
             <Route path="/settings" element={<Settings />} />
 
             {/* Protect certain routes based on admin status */}
             <Route element={<AdminRoute adminStatus={adminStatus} />}>
               <Route path="/userManage" element={<UserManage />} />
-              <Route path="/gameEditor" element={<GameEditor />} />
             </Route>
           </Route>
 
