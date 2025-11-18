@@ -1,5 +1,3 @@
-// src/services/gameStore.js
-
 import {
   ref,
   push,
@@ -10,6 +8,7 @@ import {
 
 // Get database instance *for our initialized app*
 const db = getDatabase();
+
 /*
  * @description Get Game names from database for Game Menu
  * @args none
@@ -313,21 +312,6 @@ export const deleteGameById = async (id) => {
 };
 
 /*
- * @description Simple search alias: for now just reuse getGameById.
- * In the UI we already filter full lists in the menu.
- */
-export const searchGameById = async (id) => {
-  return getGameById(id);
-};
-
-/*
- * @description Simple search alias for levels.
- */
-export const searchLevelById = async (id) => {
-  return getLevelById(id);
-};
-
-/*
  * @description Delete a level by id (removes from LevelList and Level)
  */
 export const deleteLevelById = async (id) => {
@@ -361,3 +345,56 @@ export const deleteLevelById = async (id) => {
     };
   }
 };
+
+
+
+
+// More functions and updates needed:
+// Search game by name would be implemented by filtering the list we get in menu, we will not make database calls/
+// Add functions to record video, capture pose and record other data while playing game
+//
+// Add story, pictures etc fields for each game
+//
+// Games will only have level id attached to maintain fresh data and remove duplicate update,
+// if needed create level id to name mapping to implement level menu for a specific game
+//
+// store the list of created game/level ids of each user as their field
+// so that we can look it up quickly and enforce new games/levels created have distinct names
+// SEE if firebase rules can implement that uniqueness for us
+
+
+
+
+
+// Example: Auto-create a dummy unpublished game
+          /* const dummyGame = {
+            id: null,
+            author: user.email,
+            name: "Hidden Village Prototype",
+            keywords: ["test", "prototype", "demo"],
+            isPublished: false,
+            levelIds: {
+              level1: { name: "Forest Entrance", difficulty: "Easy" },
+              level2: { name: "Mountain Path", difficulty: "Medium" }
+            },
+            settings: {
+              difficulty: "Normal",
+              maxPlayers: 1,
+              environment: "Fantasy"
+            }
+          };
+
+          try {
+            const result = await writeGame(
+              dummyGame.id,
+              dummyGame.author,
+              dummyGame.name,
+              dummyGame.keywords,
+              dummyGame.isPublished,
+              dummyGame.levelIds,
+              dummyGame.settings
+            );
+            console.log("Auto-created dummy game:", result);
+          } catch (error) {
+            console.error("Failed to auto-create dummy game:", error);
+          } */
