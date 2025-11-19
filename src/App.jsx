@@ -14,6 +14,8 @@ import StudentAuth from "./pages/Auth/studentAuth/studentAuth.jsx";
 import { useAuth } from "./contexts/AuthContext.jsx";
 import AdminRoute from "./components/util/AdminRoute.jsx";
 import PlaceHolder from "./pages/Placeholder/Placeholder.jsx";
+import LevelEditor from "./pages/LevelEditor/LevelEditor.jsx";
+import LevelMenu from "./pages/LevelMenu/levelMenu.jsx";
 
 const App = () => {
   const [isLoggedIn, setisLoggedIn] = useState(false);
@@ -33,37 +35,54 @@ const App = () => {
     }
   }, [user]);
 
-  //adding tempory placeholder route for motion capture implementation
   return (
     <Router>
       <Layout>
         <Routes>
-          <Route path="/signIn" element={<StudentAuth />} />
-          <Route path="/AdminSignIn" element={<SignIn />} />
-          <Route path="/AdminSignUp" element={<SignUp />} />
-          <Route path="/Placeholder" element={<PlaceHolder />} />
-          
+          {/* PUBLIC */}
+          <Route path="signIn" element={<StudentAuth />} />
+          <Route path="AdminSignIn" element={<SignIn />} />
+          <Route path="AdminSignUp" element={<SignUp />} />
+          <Route path="Placeholder" element={<PlaceHolder />} />
 
-          {/* Protect routes based on login status */}
+          {/* PROTECTED */}
           <Route element={<ProtectedRoute loginStatus={isLoggedIn} />}>
             <Route path="/" element={<Home />} />
 
-            <Route path="/play" element={<GameMenu mode="play" />} />
-            <Route path="/play/:gameId" element={<GamePlayer />} />
+            {/* GAME ROUTES */}
+            <Route path="game">
 
-            <Route path="/edit" element={<GameMenu mode="edit" />} />
-            <Route path="/edit/:gameId" element={<GameEditor />} />
+              {/* PLAY MODE */}
+              <Route path="play" element={<GameMenu mode="play" />} />
+              <Route path="play/:gameId" element={<GamePlayer />} />
 
-            <Route path="/settings" element={<Settings />} />
+              {/* EDIT MODE */}
+              <Route path="edit/new" element={<GameEditor isNew={true} />} />
+              <Route path="edit" element={<GameMenu mode="edit" />} />
+              <Route path="edit/:id" element={<GameEditor isNew={false} />} />
 
-            {/* Protect certain routes based on admin status */}
+            </Route>
+
+            {/* LEVEL ROUTES */}
+            <Route path="level">
+              
+              <Route path="edit/new" element={<LevelEditor isNew={true} />} />
+              <Route path="edit" element={<LevelMenu mode="edit" />} />
+              <Route path="edit/:id" element={<LevelEditor isNew={false} />} />
+
+            </Route>
+
+            {/* SETTINGS */}
+            <Route path="settings" element={<Settings />} />
+
+            {/* ADMIN ONLY */}
             <Route element={<AdminRoute adminStatus={adminStatus} />}>
-              <Route path="/userManage" element={<UserManage />} />
+              <Route path="userManage" element={<UserManage />} />
             </Route>
           </Route>
 
-          {/* Any undefined paths redirect to student sign in */}
-          <Route path="*" element={<StudentAuth/>} />
+          {/* CATCH ALL */}
+          <Route path="*" element={<StudentAuth />} />
         </Routes>
       </Layout>
     </Router>

@@ -41,7 +41,7 @@ const Sprite = ({ sprite }) => {
   );
 };
 
-const GamePlayer = ({ gameData, initialLevel, onComplete }) => {
+const GamePlayer = ({ gameId, initialLevel = 0, onComplete}) => {
   const [currentDialogue, setCurrentDialogue] = useState(0);
   const [showCursor, setShowCursor] = useState(false);
   const { poseData, loading } = GetPoseData({ 

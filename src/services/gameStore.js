@@ -6,11 +6,11 @@ import {
   update,
   set
 } from "firebase/database";
-import { 
-  getStorage, 
-  ref as storageRef, 
-  uploadBytes, 
-  getDownloadURL 
+import {
+  getStorage,
+  ref as storageRef,
+  uploadBytes,
+  getDownloadURL
 } from "firebase/storage";
 
 // Get database and storage instances
@@ -20,6 +20,103 @@ const storage = getStorage();
 // ============================================
 // GAME FUNCTIONS
 // ============================================
+
+/**
+ * Writes or updates a game in Firebase.
+ *
+ * @param {string|null} id - Existing gameId OR null to generate a new one.
+ * @param {string|null} author - Creator of the game.
+ * @param {string|null} name - Game title.
+ * @param {string|null} keywords - Search keywords.
+ * @param {boolean} isPublished - Whether game is published.
+ * @param {Array<string|null>} levelIds - List of level IDs.
+ * @param {object|null} settings - Settings object.
+ */
+export const writeGame = async (
+  id,
+  author,
+  name,
+  keywords,
+  isPublished,
+  levelIds,
+  settings,
+  pin
+) => {
+  // If no id, generate one automatically
+  const gameId = id || push(ref(db, "Games")).key;
+
+  try {
+    const safeLevelIds = Array.isArray(levelIds) ? levelIds : [];
+    // All fields should be present for published games
+    if (
+      isPublished &&
+      (
+        !author ||
+        !name ||
+        !keywords ||
+        !settings ||
+        safeLevelIds.length === 0 ||
+        safeLevelIds.some((id) => id == null ||
+          pin == null)
+      )
+    ) {
+      return {
+        success: false,
+        status: 400,
+        message:
+          "Published game must have all required fields and valid levelIds.",
+      };
+    }
+
+    // ================================
+    // NORMALIZE LEVEL IDS AS OBJ
+    // ================================
+    const levelIdsObj = {};
+    safeLevelIds.forEach((lvlId, index) => {
+      levelIdsObj[index] = lvlId ?? null;
+    });
+
+    const metadata = {
+      author: author ?? null,
+      name: name ?? null,
+      keywords: keywords ?? null,
+      isPublished: isPublished ?? false,
+      pin: pin,
+    };
+
+    const gameData = {
+      ...metadata,
+      settings: settings ?? {},
+      levelIds: levelIdsObj,
+    };
+
+    const updates = {
+      [`GameList/${gameId}`]: metadata,
+      [`Games/${gameId}`]: gameData,
+    };
+
+    await update(ref(db), updates);
+
+    return {
+      success: true,
+      status: 200,
+      message: "Game saved successfully.",
+      data: { gameId },
+    };
+  } catch (error) {
+    console.error("writeGame error:", error);
+    return {
+      success: false,
+      status: 500,
+      message: "Failed to save game.",
+      error: {
+        code: error.code || "FIREBASE_WRITE_ERROR",
+        details: error.message,
+        stack: error.stack,
+      },
+    };
+  }
+};
 
 /**
  * Get all games from database for Game Menu
@@ -35,7 +132,21 @@ export const getGamesList = async () => {
         message: "No games found (empty DB)",
       };
     }
-    return { success: true, data: snapshot.val() };
+
+    const rawData = snapshot.val();
+    const structuredData = Object.fromEntries(
+      Object.entries(rawData).map(([gameId, game]) => [
+        gameId,
+        {
+          author: game?.author ?? null,
+          name: game?.name ?? null,
+          keywords: game?.keywords ?? null,
+          isPublished: game?.isPublished ?? false,
+        },
+      ])
+    );
+
+    return { success: true, data: structuredData };
   } catch (error) {
     console.error("getGamesList error:", error);
     return {
@@ -70,10 +181,27 @@ export const getGameById = async (id) => {
     }
 
     const game = snapshot.val() || {};
+
+    // Enforce null-safe structure and ordered levelIds
+    const structuredGame = {
+      author: game.author ?? null,
+      name: game.name ?? null,
+      keywords: game.keywords ?? null,
+      isPublished: game.isPublished ?? false,
+      settings: game.settings ?? {},
+      levelIds: Array.isArray(game.levelIds)
+        ? game.levelIds
+        : game.levelIds
+          ? Object.keys(game.levelIds)
+            .sort((a, b) => a - b)
+            .map((k) => game.levelIds[k] ?? null)
+          : [],
+    };
+
     return {
       success: true,
       status: 200,
-      data: { id, ...game },
+      data: { id, ...structuredGame },
     };
   } catch (error) {
     console.error("getGameById error:", error);
@@ -82,71 +210,6 @@ export const getGameById = async (id) => {
       status: 500,
       message: "Failed to fetch game.",
       error: error?.message || error,
-    };
-  }
-};
-
-/**
- * Write/update a game to the database
- * @param {string|null} id - Existing game id or null for new
- * @param {string} author - Author email/name
- * @param {string} name - Game name
- * @param {string|array} keywords - Search keywords
- * @param {boolean} isPublished - Published status
- * @param {array} levelIds - Array of level IDs
- * @param {object} settings - Game settings
- * @returns { success, status, message, data? }
- */
-export const writeGame = async (
-  id,
-  author,
-  name,
-  keywords,
-  isPublished,
-  levelIds,
-  settings
-) => {
-  const gameId = id || push(ref(db, "Games")).key;
-
-  try {
-    if (isPublished && (!author || !name || !keywords || !settings)) {
-      return {
-        success: false,
-        status: 400,
-        message: "Missing required fields for published game.",
-      };
-    }
-
-    const updates = {
-      [`GameList/${gameId}`]: { author, name, keywords, isPublished },
-      [`Games/${gameId}`]: {
-        author,
-        name,
-        keywords,
-        isPublished,
-        levelIds,
-        settings,
-      },
-    };
-    await update(ref(db), updates);
-
-    return {
-      success: true,
-      status: 200,
-      message: "Game saved successfully.",
-      data: { gameId },
-    };
-  } catch (error) {
-    console.error("writeGame error:", error);
-    return {
-      success: false,
-      status: 500,
-      message: "Failed to save game.",
-      error: {
-        code: error.code || "FIREBASE_WRITE_ERROR",
-        details: error.message,
-        stack: error.stack,
-      },
     };
   }
 };
@@ -193,6 +256,88 @@ export const deleteGameById = async (id) => {
 // ============================================
 
 /**
+ * Write/update a level
+ * @param {string|null} id - Existing level id or null for new
+ * @param {string} author - Author email/name
+ * @param {string} name - Level name
+ * @param {string|array} keywords - Search keywords
+ * @param {object} poses - Pose data
+ * @param {string} description - Level description
+ * @param {string} question - Quiz question
+ * @param {array} options - Quiz options
+ * @param {array} answers - Correct answers
+ * @param {boolean} isPublished - Published status
+ * @returns { success, data?, message, error? }
+ */
+export const writeLevel = async (
+  id,
+  author,
+  name,
+  keywords,
+  poses,
+  description,
+  question,
+  options,
+  answers,
+  isPublished
+) => {
+  const levelId = id || push(ref(db, "Level")).key;
+
+  try {
+    const safeOptions = Array.isArray(options) ? options : [];
+    const safeAnswers = Array.isArray(answers) ? answers : [];
+
+    // Validate required fields for published levels
+    if (
+      isPublished &&
+      (!author || !name || !poses || !question || safeOptions.length === 0 || safeAnswers.length === 0)
+    ) {
+      return {
+        success: false,
+        status: 400,
+        message: "Missing required fields for published level.",
+      };
+    }
+
+    const updates = {
+      [`LevelList/${levelId}`]: {
+        author: author ?? null,
+        name: name ?? null,
+        keywords: keywords ?? null,
+        isPublished: isPublished ?? false,
+      },
+      [`Level/${levelId}`]: {
+        author: author ?? null,
+        name: name ?? null,
+        keywords: keywords ?? null,
+        poses: poses ?? {},
+        description: description ?? null,
+        question: question ?? null,
+        options: safeOptions,
+        answers: safeAnswers,
+        isPublished: isPublished ?? false,
+      },
+    };
+
+    await update(ref(db), updates);
+
+    return {
+      success: true,
+      data: { levelId },
+      message: "Level saved successfully",
+    };
+  } catch (error) {
+    console.error("writeLevel error:", error);
+    return {
+      success: false,
+      status: 500,
+      message: "Failed to save level",
+      error: error?.message || "WRITE_LEVEL_ERROR",
+    };
+  }
+};
+
+/**
  * Get all levels for Level Menu
  * @returns { success, data, message?, error? }
  */
@@ -206,7 +351,21 @@ export const getLevelList = async () => {
         message: "No levels found (empty DB)",
       };
     }
-    return { success: true, data: snapshot.val() };
+
+    const rawData = snapshot.val();
+    const structuredData = Object.fromEntries(
+      Object.entries(rawData).map(([levelId, level]) => [
+        levelId,
+        {
+          author: level?.author ?? null,
+          name: level?.name ?? null,
+          keywords: level?.keywords ?? null,
+          isPublished: level?.isPublished ?? false,
+        },
+      ])
+    );
+
+    return { success: true, data: structuredData };
   } catch (error) {
     console.error("getLevelList error:", error);
     return {
@@ -241,10 +400,24 @@ export const getLevelById = async (id) => {
     }
 
     const level = snapshot.val() || {};
+
+    const structuredLevel = {
+      id,
+      author: level.author ?? null,
+      name: level.name ?? null,
+      keywords: level.keywords ?? null,
+      poses: level.poses ?? {},
+      description: level.description ?? null,
+      question: level.question ?? null,
+      options: Array.isArray(level.options) ? level.options : [],
+      answers: Array.isArray(level.answers) ? level.answers : [],
+      isPublished: level.isPublished ?? false,
+    };
+
     return {
       success: true,
       status: 200,
-      data: { id, ...level },
+      data: structuredLevel,
     };
   } catch (error) {
     console.error("getLevelById error:", error);
@@ -253,75 +426,6 @@ export const getLevelById = async (id) => {
       status: 500,
       message: "Failed to fetch level.",
       error: error?.message || error,
-    };
-  }
-};
-
-/**
- * Write/update a level
- * @param {string|null} id - Existing level id or null for new
- * @param {string} author - Author email/name
- * @param {string} name - Level name
- * @param {string|array} keywords - Search keywords
- * @param {object} poses - Pose data
- * @param {string} description - Level description
- * @param {string} question - Quiz question
- * @param {array} options - Quiz options
- * @param {array} answers - Correct answers
- * @param {boolean} isPublished - Published status
- * @returns { success, data?, message, error? }
- */
-export const writeLevel = async (
-  id,
-  author,
-  name,
-  keywords,
-  poses,
-  description,
-  question,
-  options,
-  answers,
-  isPublished
-) => {
-  const levelId = id || push(ref(db, "Level")).key;
-
-  try {
-    if (
-      isPublished &&
-      (!author || !name || !poses || !question || !options || !answers)
-    ) {
-      return {
-        success: false,
-        error: "Missing required fields for published level.",
-      };
-    }
-
-    const updates = {
-      [`LevelList/${levelId}`]: { author, name, keywords, isPublished },
-      [`Level/${levelId}`]: {
-        author,
-        name,
-        keywords,
-        isPublished,
-        poses,
-        description,
-        question,
-        options,
-        answers,
-      },
-    };
-    await update(ref(db), updates);
-
-    return {
-      success: true,
-      data: { levelId },
-      message: "Level saved successfully",
-    };
-  } catch (error) {
-    console.error("writeLevel error:", error);
-    return {
-      success: false,
-      error: error?.message || "Failed to save level",
     };
   }
 };
@@ -364,7 +468,7 @@ export const deleteLevelById = async (id) => {
 };
 
 // ============================================
-// GAMEPLAY SESSION FUNCTIONS
+// GAMEPLAY SESSION FUNCTIONS - THEY HAVENT BEEN TESTED, WILL MODIFY WHEN TIME COMES
 // ============================================
 
 /**
@@ -398,12 +502,12 @@ export const writeGameplayFrames = async (
       const frameIndex = startIndex + index;
       updates[`UserGameplay/${userId}/games/${gameId}/levels/${levelId}/sessions/${sessionId}/frames/${frameIndex}`] = frame;
     });
-    
+
     // Single atomic write for all frames in batch
     await update(ref(db), updates);
 
-    return { 
-      success: true, 
+    return {
+      success: true,
       nextIndex: startIndex + framesBatch.length
     };
   } catch (error) {
@@ -545,7 +649,7 @@ export const getSessionById = async (userId, sessionId) => {
     }
 
     const sessionData = snapshot.val();
-    
+
     // Convert frames object to sorted array for easy playback
     if (sessionData.frames) {
       const framesObj = sessionData.frames;
@@ -577,7 +681,7 @@ export const getSessionFrameRange = async (userId, sessionId, startFrame, endFra
 
   try {
     const frames = [];
-    
+
     // Query specific frame range
     for (let i = startFrame; i <= endFrame; i++) {
       const snapshot = await get(
@@ -666,7 +770,7 @@ export const deleteSession = async (userId, sessionId) => {
 
     // Note: You may also want to delete the video from Storage
     // This requires getting the video path first, then using deleteObject()
-    
+
     return { success: true };
   } catch (error) {
     console.error("deleteSession error:", error);
@@ -813,7 +917,7 @@ export const getLeaderboard = async (gameId, levelId, limit = 100) => {
 export const getDeviceId = () => {
   // Check if device ID already exists in localStorage
   let deviceId = localStorage.getItem('deviceId');
-  
+
   if (!deviceId) {
     // Generate device fingerprint based on browser/device characteristics
     const fingerprint = [
@@ -826,12 +930,12 @@ export const getDeviceId = () => {
       navigator.hardwareConcurrency,
       navigator.deviceMemory,
     ].join('|');
-    
+
     // Create hash of fingerprint + random component for uniqueness
     deviceId = `device_${btoa(fingerprint).substring(0, 20)}_${Date.now()}`;
     localStorage.setItem('deviceId', deviceId);
   }
-  
+
   return deviceId;
 };
 
@@ -891,13 +995,13 @@ export default {
   getGameById,
   writeGame,
   deleteGameById,
-  
+
   // Level functions
   getLevelList,
   getLevelById,
   writeLevel,
   deleteLevelById,
-  
+
   // Gameplay session functions
   writeGameplayFrames,
   uploadGameplayVideo,
@@ -908,25 +1012,25 @@ export default {
   getSessionFrameCount,
   getSessionMetadata,
   deleteSession,
-  
+
   // User stats
   updateUserStats,
   getUserStats,
-  
+
   // Leaderboard
   addToLeaderboard,
   getLeaderboard,
-  
+
   // Device tracking
   getDeviceId,
   getDeviceInfo,
   getDeviceSessions,
 };
 
-
-// --------------------------- USER STATISTICS --------------------------- //
-
 // More functions and updates needed:
+// Ask if Michael wants the levels in an already made and saved game to not update on change to the levels in level editor as it is already saved,
+// if levels are updated, then they would NEED to remove the old level and attach the new one in the game.
+// Implement character limits, only show the users the games they have created, add group functionality like an org so that they can edit games in collaboration.
 // Functions should authenticate and authorize user before critical database calls like delete, admins may be given the supreme power to override
 //
 // Search game by name would be implemented by filtering the list we get in menu, we will not make database calls/
@@ -948,34 +1052,34 @@ export default {
 
 
 // Example: Auto-create a dummy unpublished game
-          /* const dummyGame = {
-            id: null,
-            author: user.email,
-            name: "Hidden Village Prototype",
-            keywords: ["test", "prototype", "demo"],
-            isPublished: false,
-            levelIds: {
-              level1: { name: "Forest Entrance", difficulty: "Easy" },
-              level2: { name: "Mountain Path", difficulty: "Medium" }
-            },
-            settings: {
-              difficulty: "Normal",
-              maxPlayers: 1,
-              environment: "Fantasy"
-            }
-          };
+/* const dummyGame = {
+  id: null,
+  author: user.email,
+  name: "Hidden Village Prototype",
+  keywords: ["test", "prototype", "demo"],
+  isPublished: false,
+  levelIds: {
+    level1: { name: "Forest Entrance", difficulty: "Easy" },
+    level2: { name: "Mountain Path", difficulty: "Medium" }
+  },
+  settings: {
+    difficulty: "Normal",
+    maxPlayers: 1,
+    environment: "Fantasy"
+  }
+};
 
-          try {
-            const result = await writeGame(
-              dummyGame.id,
-              dummyGame.author,
-              dummyGame.name,
-              dummyGame.keywords,
-              dummyGame.isPublished,
-              dummyGame.levelIds,
-              dummyGame.settings
-            );
-            console.log("Auto-created dummy game:", result);
-          } catch (error) {
-            console.error("Failed to auto-create dummy game:", error);
-          } */
+try {
+  const result = await writeGame(
+    dummyGame.id,
+    dummyGame.author,
+    dummyGame.name,
+    dummyGame.keywords,
+    dummyGame.isPublished,
+    dummyGame.levelIds,
+    dummyGame.settings
+  );
+  console.log("Auto-created dummy game:", result);
+} catch (error) {
+  console.error("Failed to auto-create dummy game:", error);
+} */

@@ -69,13 +69,14 @@ function Home() {
             <Link className="home-link" to="/userManage">User Management</Link>
           )}
 
-          <Link className="home-link" to="/play">Play Game</Link>
+          <Link className="home-link" to="/game/play">Play Game</Link>
+          <Link className="home-link" to="/game/edit/new"> New Game</Link>
+          <Link className="home-link" to="/game/edit">Edit Game</Link>
+
+          <Link className="home-link" to="/level/edit/new"> New Level</Link>
+          <Link className="home-link" to="/level/edit">Edit Level</Link>
+
           <Link className="home-link" to="/PlaceHolder">Pose Matching</Link>
-
-          {isAdmin && (
-            <Link className="home-link" to="/edit">Editor</Link>
-          )}
-
           <Link className="home-link" to="/settings">Settings</Link>
 
           {isAdmin && (

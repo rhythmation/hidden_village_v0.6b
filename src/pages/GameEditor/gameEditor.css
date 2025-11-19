@@ -1,193 +1,169 @@
-/* Game Editor specific styles */
-.game-editor-container {
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 20px;
+/* GameEditor.css */
+
+/* ---------------------------
+   CONTAINER
+--------------------------- */
+.editor-container {
+  max-width: 900px;
+  margin: 20px auto;
+  padding: 20px;
+  background-color: #1e1e2f;
+  color: #f0f0f0;
+  border-radius: 12px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 }
 
-.game-editor-section {
-    margin-bottom: 20px;
+/* ---------------------------
+   HEADINGS
+--------------------------- */
+.editor-container h2,
+.editor-container h3 {
+  color: #fff;
+  margin-bottom: 10px;
 }
 
-.game-editor-title {
-    font-size: 24px;
-    font-weight: 600;
-    margin-bottom: 16px;
+.editor-container h3 {
+  margin-top: 20px;
 }
 
-.game-editor-subtitle {
-    font-size: 20px;
-    font-weight: 500;
-    margin-bottom: 16px;
+/* ---------------------------
+   FORM / METADATA
+--------------------------- */
+.editor-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
 }
 
-.game-editor-input-group {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 20px;
+.editor-section label {
+  font-weight: 600;
+  margin-bottom: 4px;
 }
 
-.game-editor-input {
-    padding: 8px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    flex: 1;
+.editor-section input,
+.editor-section textarea {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #444;
+  background-color: #2a2a40;
+  color: #f0f0f0;
+  font-size: 14px;
+  outline: none;
+  transition: border 0.2s;
 }
 
-.game-editor-select {
-    width: 100%;
-    padding: 8px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
+.editor-section input:focus,
+.editor-section textarea:focus {
+  border-color: #7c5fff;
 }
 
-.game-editor-textarea {
-    width: 100%;
-    min-height: 100px;
-    padding: 8px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    resize: vertical;
+.editor-section textarea {
+  resize: vertical;
+  min-height: 80px;
 }
 
-.game-editor-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
+/* ---------------------------
+   LEVEL LIST
+--------------------------- */
+.level-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.game-editor-grid-button {
-    padding: 10px;
-    background-color: #f8f9fa;
-    border: 1px solid #dee2e6;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.2s;
+.level-item {
+  background-color: #2a2a40;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #3c3c5c;
 }
 
-.game-editor-grid-button.game-editor-selected {
-    background-color: #007bff;
-    color: white;
+.level-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  cursor: pointer;
+  font-weight: 500;
+  background-color: #2f2f50;
+  transition: background-color 0.2s;
 }
 
-.game-editor-button {
-    padding: 8px 16px;
-    background-color: #007bff;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.2s;
+.level-header:hover {
+  background-color: #3c3c5c;
 }
 
-.game-editor-button:hover {
-    background-color: #0056b3;
+.level-actions svg {
+  cursor: pointer;
+  margin-left: 8px;
+  color: #a0a0ff;
+  transition: color 0.2s;
 }
 
-.game-editor-level-details {
-    border: 1px solid #dee2e6;
-    border-radius: 4px;
-    padding: 20px;
-    margin-bottom: 20px;
+.level-actions svg:hover {
+  color: #fff;
 }
 
-.game-editor-tabs {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 20px;
+.level-body {
+  padding: 10px 14px;
+  background-color: #1f1f34;
+  font-size: 13px;
+  line-height: 1.4;
+  max-height: 400px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-wrap: break-word;
 }
 
-.game-editor-tab {
-    padding: 8px 16px;
-    background-color: #f8f9fa;
-    border: 1px solid #dee2e6;
-    border-radius: 4px;
-    cursor: pointer;
+/* ---------------------------
+   ACTION BUTTONS
+--------------------------- */
+.editor-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
 }
 
-.game-editor-tab-active {
-    background-color: #007bff;
-    color: white;
+.editor-actions button {
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: none;
+  background-color: #7c5fff;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
 }
 
-.game-editor-form-group {
-    margin-bottom: 16px;
+.editor-actions button:hover {
+  background-color: #a085ff;
 }
 
-.game-editor-form-group label {
-    display: block;
-    margin-bottom: 8px;
-    font-weight: 500;
+.editor-actions button.danger {
+  background-color: #ff4c4c;
 }
 
-.game-editor-sprite-card {
-    border: 1px solid #dee2e6;
-    border-radius: 4px;
-    padding: 16px;
-    margin-bottom: 16px;
+.editor-actions button.danger:hover {
+  background-color: #ff6e6e;
 }
 
-.game-editor-sprite-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 16px;
+/* ---------------------------
+   STATUS / ERROR MESSAGES
+--------------------------- */
+.status-msg,
+.error-msg {
+  text-align: center;
+  font-weight: 600;
+  margin: 20px 0;
 }
 
-.game-editor-sprite-position {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
+.status-msg {
+  color: #7c5fff;
 }
 
-.game-editor-add-button {
-    padding: 8px 16px;
-    background-color: #28a745;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    margin-bottom: 16px;
+.error-msg {
+  color: #ff4c4c;
 }
 
-.game-editor-remove-button {
-    padding: 6px 12px;
-    background-color: #dc3545;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-}
-
-.game-editor-navigation {
-    margin-top: 20px;
-}
-
-.game-editor-back-link {
-    text-decoration: none;
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    .game-editor-container {
-        padding: 16px;
-    }
-
-    .game-editor-grid {
-        grid-template-columns: 1fr 1fr;
-    }
-
-    .game-editor-sprite-position {
-        grid-template-columns: 1fr;
-    }
-}
-
-@media (max-width: 480px) {
-    .game-editor-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .game-editor-input-group {
-        flex-direction: column;
-    }
-}

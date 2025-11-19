@@ -15,21 +15,16 @@ function GameMenu({ mode }) {
 
   const [search, setSearch] = useState("");
 
-  // -----------------------------------------------------
-  // FETCH GAMES
-  // -----------------------------------------------------
+  // fetch games
   useEffect(() => {
     const fetchGames = async () => {
       try {
         const res = await getGamesList();
-
         if (!res.success || !res.data) {
           setGames({});
           return;
         }
 
-        // play = only published
-        // edit = all games
         let filtered;
         if (playMode) {
           filtered = Object.fromEntries(
@@ -51,9 +46,7 @@ function GameMenu({ mode }) {
     fetchGames();
   }, [playMode, editMode]);
 
-  // -----------------------------------------------------
-  // SEARCH FILTERING
-  // -----------------------------------------------------
+  // search box logic
   const filteredGames = Object.entries(games).filter(([id, g]) => {
     try {
       const reg = new RegExp(search, "i");
@@ -67,69 +60,67 @@ function GameMenu({ mode }) {
     }
   });
 
-  // -----------------------------------------------------
-  // CLICK GAME → NAVIGATE TO ROUTE
-  // -----------------------------------------------------
+  // click game → navigate to that game
   const handleSelectGame = (id) => {
-    if (playMode) navigate(`/play/${id}`);
-    if (editMode) navigate(`/edit/${id}`);
+    if (playMode) navigate(`/game/play/${id}`);
+    if (editMode) navigate(`/game/edit/${id}`);
   };
 
-  // -----------------------------------------------------
-  // RENDER
-  // -----------------------------------------------------
+  // render UI
   if (loading) return <p className="status-msg">Loading games...</p>;
   if (error) return <p className="error-msg">⚠️ {error}</p>;
 
   return (
-    <div className="game-menu">
-      <h2 className="menu-title">
-        {playMode ? "🎮 Play Published Games" : "🛠 Edit Your Games"}
-      </h2>
+    <div className="section">
+      <h2 className="title">{playMode ? "Play" : "Edit"}</h2>
 
       <input
         placeholder="Search by name, author, or keyword"
-        className="game-search"
+        className="search"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
       />
 
-      <table className="game-table">
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Author</th>
-            <th>Keywords</th>
-            {!playMode && <th>Status</th>}
-          </tr>
-        </thead>
-        <tbody>
-          {filteredGames.map(([id, game]) => (
-            <tr
-              key={id}
-              className="game-row"
-              onClick={() => handleSelectGame(id)}
-            >
-              <td>{game.name || "Untitled Game"}</td>
-              <td>{game.author || "Unknown"}</td>
-              <td>
-                {Array.isArray(game.keywords)
-                  ? game.keywords.join(", ")
-                  : game.keywords || "None"}
-              </td>
-
-              {!playMode && (
-                <td style={{ color: game.isPublished ? "#3fa33f" : "#f28b30" }}>
-                  {game.isPublished ? "Published" : "Unpublished"}
-                </td>
-              )}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
-      {filteredGames.length === 0 && (
-        <p className="status-msg">No games match your search.</p>
+      {Object.keys(games).length > 0 ? (
+        filteredGames.length > 0 ? (
+          <div className="table-container">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Author</th>
+                  <th>Keywords</th>
+                  <th>Published</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredGames.map(([id, game]) => (
+                  <tr key={id} onClick={() => handleSelectGame(id)}>
+                    <td className="ellipsis">{game.name || "Untitled Game"}</td>
+                    <td className="ellipsis">{game.author || "Unknown"}</td>
+                    <td className="ellipsis">
+                      {Array.isArray(game.keywords)
+                        ? game.keywords.join(", ")
+                        : game.keywords || "None"}
+                    </td>
+                    <td
+                      className="ellipsis"
+                      style={{ color: game.isPublished ? "#3fa33f" : "#f28b30" }}
+                    >
+                      {playMode ? "" : game.isPublished ? "✅" : "❌"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="no-game">No games match your search</p>
+        )
+      ) : (
+        <p className="no-game">
+          {playMode ? "No published games available" : "No games found"}
+        </p>
       )}
     </div>
   );

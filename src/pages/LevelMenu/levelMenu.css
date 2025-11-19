@@ -14,7 +14,7 @@
   margin: 1rem 0;
 }
 
-/* Search input */
+/* Search input - always visible */
 .search {
   align-self: flex-end;
   margin-right: 20px;
@@ -25,7 +25,7 @@
   font-size: 1.5rem;
   border-radius: 1.5rem;
   border: 1px solid #ccc;
-  min-width: 200px;
+  min-width: 200px; /* optional for small screens */
 }
 
 /* Table container */
@@ -95,7 +95,7 @@
   text-overflow: ellipsis;
 }
 
-/* No games message */
+/* No games/levels message */
 .no-game {
   padding-top: 10vh;
   color: red;
