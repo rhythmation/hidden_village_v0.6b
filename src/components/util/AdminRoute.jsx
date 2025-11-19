@@ -1,7 +1,6 @@
-import { Navigate, Outlet } from "react-router-dom";
+export default function AdminRoute({ adminStatus }) {
+  const { loading } = useAuth();
+  if (loading) return <div>Loading...</div>;
 
-export default function AdminRoute({adminStatus}) {
-    const isAdmin = adminStatus || false
-
-  return isAdmin ? <Outlet /> : <Navigate to="/" />;
+  return adminStatus ? <Outlet /> : <Navigate to="/" replace />;
 }

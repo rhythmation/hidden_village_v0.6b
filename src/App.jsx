@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import Layout from "./components/Layout.jsx";
 import Home from "./pages/Home/home.jsx";
@@ -18,22 +18,12 @@ import LevelEditor from "./pages/LevelEditor/LevelEditor.jsx";
 import LevelMenu from "./pages/LevelMenu/levelMenu.jsx";
 
 const App = () => {
-  const [isLoggedIn, setisLoggedIn] = useState(false);
-  const [adminStatus, setAdminStatus] = useState(false);
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
 
-  useEffect(() => {
-    if (user) {
-      if (user.isAnonymous) {
-        setisLoggedIn(true);
-      } else if (user.emailVerified) {
-        setAdminStatus(true);
-        setisLoggedIn(true);
-      } else {
-        setisLoggedIn(false);
-      }
-    }
-  }, [user]);
+  const isLoggedIn = !!user;
+  const adminStatus = user && !user.isAnonymous && user.emailVerified;
+
+  if (loading) return <div>Loading...</div>;
 
   return (
     <Router>
@@ -46,42 +36,32 @@ const App = () => {
           <Route path="Placeholder" element={<PlaceHolder />} />
 
           {/* PROTECTED */}
-          <Route element={<ProtectedRoute loginStatus={isLoggedIn} />}>
+          <Route element={<ProtectedRoute isLoggedIn={isLoggedIn} />}>
             <Route path="/" element={<Home />} />
 
-            {/* GAME ROUTES */}
             <Route path="game">
-
-              {/* PLAY MODE */}
               <Route path="play" element={<GameMenu mode="play" />} />
               <Route path="play/:gameId" element={<GamePlayer />} />
 
-              {/* EDIT MODE */}
-              <Route path="edit/new" element={<GameEditor isNew={true} />} />
+              <Route path="edit/new" element={<GameEditor isNew />} />
               <Route path="edit" element={<GameMenu mode="edit" />} />
               <Route path="edit/:id" element={<GameEditor isNew={false} />} />
-
             </Route>
 
-            {/* LEVEL ROUTES */}
             <Route path="level">
-              
-              <Route path="edit/new" element={<LevelEditor isNew={true} />} />
+              <Route path="edit/new" element={<LevelEditor isNew />} />
               <Route path="edit" element={<LevelMenu mode="edit" />} />
               <Route path="edit/:id" element={<LevelEditor isNew={false} />} />
-
             </Route>
 
-            {/* SETTINGS */}
             <Route path="settings" element={<Settings />} />
 
-            {/* ADMIN ONLY */}
+            {/* ADMIN ROUTES */}
             <Route element={<AdminRoute adminStatus={adminStatus} />}>
               <Route path="userManage" element={<UserManage />} />
             </Route>
           </Route>
 
-          {/* CATCH ALL */}
           <Route path="*" element={<StudentAuth />} />
         </Routes>
       </Layout>
