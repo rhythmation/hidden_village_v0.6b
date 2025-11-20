@@ -1,269 +1,319 @@
-// -------------------------------------------
-// GameEditor.jsx (Fixed + Redirect to Home)
-// -------------------------------------------
-import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { MoveUp, MoveDown, Trash2 } from "lucide-react";
-import {
-  writeGame,
-  getGameById,
-  getLevelById,
-  deleteGameById,
-} from "../../services/gameStore";
-import { useAuth } from "../../contexts/AuthContext";
-
-import "./GameEditor.css";
+// src/pages/GameEditor/GameEditor.jsx
+import React, { useRef, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
+import { MoveUp, MoveDown, Trash2, Edit2, Plus, Check, X, ArrowLeft, BookOpen } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+import { useGameEditor } from '../../hooks/useGameEditor';
+import './GameEditor.css';
 
 function GameEditor({ isNew = false }) {
-  // We ONLY read params if editing
   const { id } = useParams();
-  const navigate = useNavigate();
   const { user } = useAuth();
+  const editRef = useRef(null);
 
-  const [game, setGame] = useState({
-    id: null,
-    name: "",
-    author: user.email ?? "",
-    description: "",
-    keywords: "",
-    pin: "",
-    levelIds: [],
-    settings: {},
-  });
+  const {
+    game,
+    loadingGame,
+    savingGame,
+    allAvailableLevels,
+    expandedLevel,
+    showAddLevel,
+    setShowAddLevel,
+    editingField,
+    editValue,
+    setEditValue,
+    startEditing,
+    saveEdit,
+    cancelEdit,
+    addLevel,
+    removeLevel,
+    moveLevel,
+    toggleExpandLevel,
+    getLevelData,
+    handleSave,
+    handleDelete,
+    handleBack,
+  } = useGameEditor(id, isNew, user?.email);
 
-  const [loadingGame, setLoadingGame] = useState(true);
-  const [levelOrder, setLevelOrder] = useState([]);
-  const [levels, setLevels] = useState([]);
-  const [expandedLevel, setExpandedLevel] = useState(null);
+  const handleKeyDown = (e, isTextarea = false) => {
+    if (isTextarea) {
+      if (e.key === 'Enter' && e.ctrlKey) saveEdit();
+      if (e.key === 'Escape') saveEdit();
+    } else {
+      if (e.key === 'Enter') saveEdit();
+      if (e.key === 'Escape') saveEdit();
+    }
+  };
 
-  // -----------------------------
-  // LOAD GAME ON EDIT ROUTE
-  // -----------------------------
+  // Handle click outside to save
   useEffect(() => {
-    if (isNew) {
-      // NEW GAME MODE
-      setLoadingGame(false);
-      setGame((prev) => ({ ...prev, id: null }));
-      setLevelOrder([]);
-      setLevels([]);
-      return;
-    }
-
-    // EDIT MODE
-    if (id) loadGame(id);
-  }, [id, isNew]);
-
-  async function loadGame(gameId) {
-    setLoadingGame(true);
-    try {
-      const res = await getGameById(gameId);
-      if (!res.success) {
-        alert("Failed to load game.");
-        return setLoadingGame(false);
+    const handleClickOutside = (event) => {
+      if (editRef.current && !editRef.current.contains(event.target)) {
+        saveEdit();
       }
+    };
 
-      const g = res.data ?? {};
-
-      // Normalize level IDs
-      const levelIds = Array.isArray(g.levelIds)
-        ? g.levelIds
-        : [];
-
-      setGame({ ...g, id: gameId });
-      setLevelOrder(levelIds);
-
-      // Create loading placeholders
-      setLevels(
-        levelIds.map((id) => ({ id, data: null, loading: true }))
-      );
-
-      // Load each level async
-      levelIds.forEach(async (levelId) => {
-        try {
-          const lvlRes = await getLevelById(levelId);
-          setLevels((prev) =>
-            prev.map((lvl) =>
-              lvl.id === levelId
-                ? {
-                    ...lvl,
-                    data: lvlRes.success ? lvlRes.data : { name: "(Failed to load)" },
-                    loading: false,
-                  }
-                : lvl
-            )
-          );
-        } catch {
-          setLevels((prev) =>
-            prev.map((lvl) =>
-              lvl.id === levelId
-                ? {
-                    ...lvl,
-                    data: { name: "(Failed to load)" },
-                    loading: false,
-                  }
-                : lvl
-            )
-          );
-        }
-      });
-    } catch (err) {
-      alert("Unexpected error loading game.");
-    } finally {
-      setLoadingGame(false);
-    }
-  }
-
-  // -----------------------------
-  // UPDATE FIELD
-  // -----------------------------
-  const updateField = (field, value) => {
-    setGame((prev) => ({ ...prev, [field]: value }));
-  };
-
-  // -----------------------------
-  // REORDER LEVELS
-  // -----------------------------
-  const moveLevel = (index, dir) => {
-    const newOrder = [...levelOrder];
-    const newIndex = index + dir;
-    if (newIndex < 0 || newIndex >= newOrder.length) return;
-    [newOrder[index], newOrder[newIndex]] = [
-      newOrder[newIndex],
-      newOrder[index],
-    ];
-    setLevelOrder(newOrder);
-  };
-
-  // -----------------------------
-  // SAVE GAME (DRAFT/PUBLISH)
-  // -----------------------------
-  async function handleSave(isPublish = false) {
-  const res = await writeGame(
-    game.id ?? null,
-    game.author ?? null,
-    game.name ?? null,
-    game.keywords ?? null,
-    isPublish,
-    levelOrder ?? [],
-    game.settings ?? {},
-    game.pin ?? null
-  );
-
-  if (!res.success) {
-    alert(res.message || "Failed to save game.");
-    return;
-  }
-
-  // NEW GAME → home
-  if (isNew && res.data?.gameId) {
-    alert("Game created!");
-    return navigate("/", { replace: true });
-  }
-
-  // EXISTING GAME → also home
-  alert(isPublish ? "Game published!" : "Draft saved!");
-  navigate("/", { replace: true });
-}
-
-  // -----------------------------
-  // DELETE GAME
-  // -----------------------------
-  async function handleDelete() {
-    if (!window.confirm("Delete this game?")) return;
-
-    const res = await deleteGameById(game.id);
-    if (res.success) {
-      alert("Game deleted.");
-      return navigate("/", { replace: true }); // redirect home
+    if (editingField) {
+      document.addEventListener('mousedown', handleClickOutside);
     }
 
-    alert("Failed to delete game.");
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [editingField, saveEdit]);
+
+  // Loading state
+  if (loadingGame) {
+    return <p className="game-editor-loading">Loading game...</p>;
   }
 
-  // -----------------------------
-  // RENDER
-  // -----------------------------
-  if (loadingGame) return <p>Loading game...</p>;
-  if (!game) return <p>Game not found.</p>;
+  if (!game) {
+    return <p className="game-editor-error">Game not found.</p>;
+  }
 
   return (
-    <div className="editor-container">
-      <h2>{isNew ? "Create New Game" : `Editing: ${game.name}`}</h2>
+    <div className="game-editor">
+      {/* HEADER */}
+      <div className="game-editor-header">
+        <button className="game-editor-back-btn" onClick={handleBack}>
+          <ArrowLeft size={20} />
+          Back to Games
+        </button>
+        <h2 className="game-editor-title">
+          {isNew ? 'Create New Game' : 'Editing Game'}
+        </h2>
+        <div className="game-editor-spacer"></div>
+      </div>
 
       {/* GAME INFO */}
-      <div className="editor-section">
-        <label>Name</label>
-        <input
-          value={game.name}
-          placeholder="Enter game name"
-          onChange={(e) => updateField("name", e.target.value)}
-        />
-
-        <label>Author</label>
-        <input value={game.author ?? ""} disabled />
-
-        <label>Description</label>
-        <textarea
-          value={game.description}
-          placeholder="Game description"
-          onChange={(e) => updateField("description", e.target.value)}
-        />
-
-        <label>Keywords</label>
-        <input
-          value={game.keywords}
-          placeholder="Comma separated keywords"
-          onChange={(e) => updateField("keywords", e.target.value)}
-        />
-
-        <label>PIN</label>
-        <input
-          value={game.pin}
-          placeholder="Enter PIN"
-          onChange={(e) => updateField("pin", e.target.value)}
-        />
-      </div>
-
-      {/* LEVEL LIST */}
-      <h3>Levels</h3>
-      <div className="level-list">
-        {levels.map((lvl, index) => (
-          <div key={lvl.id} className="level-item">
-            <div
-              className="level-header"
-              onClick={() =>
-                setExpandedLevel(expandedLevel === lvl.id ? null : lvl.id)
-              }
-            >
-              <span>{lvl.data?.name ?? "(loading…)"}</span>
-
-              <div className="level-actions">
-                <MoveUp onClick={() => moveLevel(index, -1)} />
-                <MoveDown onClick={() => moveLevel(index, 1)} />
-                <Trash2 />
+      <div className="game-editor-info">
+        {/* Name */}
+        <div className="game-editor-row">
+          <label>Name</label>
+          <div className="game-editor-value">
+            {editingField === 'name' ? (
+              <div ref={editRef} style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1 }}>
+                <input
+                  type="text"
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  autoFocus
+                  className="game-editor-input-edit"
+                />
+                <Check className="game-editor-icon-save" onClick={saveEdit} />
+                <X className="game-editor-icon-cancel" onClick={cancelEdit} />
               </div>
-            </div>
-
-            {expandedLevel === lvl.id && (
-              <div className="level-body">
-                {lvl.loading ? (
-                  <p>Loading level…</p>
-                ) : (
-                  <pre>{JSON.stringify(lvl.data, null, 2)}</pre>
-                )}
-              </div>
+            ) : (
+              <>
+                <span onDoubleClick={() => startEditing('name', game.name)}>
+                  {game.name || 'Click to edit'}
+                </span>
+                <Edit2 className="game-editor-icon-edit" onClick={() => startEditing('name', game.name)} />
+              </>
             )}
           </div>
-        ))}
+        </div>
+
+        {/* Author */}
+        <div className="game-editor-row">
+          <label>Author</label>
+          <div className="game-editor-value">
+            <span className="game-editor-readonly">{game.author}</span>
+          </div>
+        </div>
+
+        {/* Description */}
+        <div className="game-editor-row">
+          <label>Description</label>
+          <div className="game-editor-value">
+            {editingField === 'description' ? (
+              <div ref={editRef} style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1 }}>
+                <textarea
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  onKeyDown={(e) => handleKeyDown(e, true)}
+                  autoFocus
+                  className="game-editor-textarea-edit"
+                />
+                <Check className="game-editor-icon-save" onClick={saveEdit} />
+                <X className="game-editor-icon-cancel" onClick={cancelEdit} />
+              </div>
+            ) : (
+              <>
+                <span onDoubleClick={() => startEditing('description', game.description)}>
+                  {game.description || 'Click to edit'}
+                </span>
+                <Edit2 className="game-editor-icon-edit" onClick={() => startEditing('description', game.description)} />
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Keywords */}
+        <div className="game-editor-row">
+          <label>Keywords</label>
+          <div className="game-editor-value">
+            {editingField === 'keywords' ? (
+              <div ref={editRef} style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1 }}>
+                <input
+                  type="text"
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  autoFocus
+                  className="game-editor-input-edit"
+                />
+                <Check className="game-editor-icon-save" onClick={saveEdit} />
+                <X className="game-editor-icon-cancel" onClick={cancelEdit} />
+              </div>
+            ) : (
+              <>
+                <span onDoubleClick={() => startEditing('keywords', game.keywords)}>
+                  {game.keywords || 'Click to edit'}
+                </span>
+                <Edit2 className="game-editor-icon-edit" onClick={() => startEditing('keywords', game.keywords)} />
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* PIN */}
+        <div className="game-editor-row">
+          <label>PIN</label>
+          <div className="game-editor-value">
+            {editingField === 'pin' ? (
+              <div ref={editRef} style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1 }}>
+                <input
+                  type="text"
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  autoFocus
+                  className="game-editor-input-edit"
+                />
+                <Check className="game-editor-icon-save" onClick={saveEdit} />
+                <X className="game-editor-icon-cancel" onClick={cancelEdit} />
+              </div>
+            ) : (
+              <>
+                <span onDoubleClick={() => startEditing('pin', game.pin)}>
+                  {game.pin || 'Click to edit'}
+                </span>
+                <Edit2 className="game-editor-icon-edit" onClick={() => startEditing('pin', game.pin)} />
+              </>
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* BUTTONS */}
-      <div className="editor-actions">
-        <button onClick={() => handleSave(false)}>💾 Save Draft</button>
-        <button onClick={() => handleSave(true)}>🚀 Publish</button>
+      {/* LEVELS SECTION */}
+      <div className="game-editor-levels-header">
+        <h3 className="game-editor-subtitle">Levels</h3>
+        <div className="game-editor-levels-actions">
+          <button className="game-editor-storyline-btn" onClick={() => alert('Storyline editor coming soon!')}>
+            <BookOpen size={18} /> Edit Storyline
+          </button>
+          <button className="game-editor-add-level-btn" onClick={() => setShowAddLevel(!showAddLevel)}>
+            <Plus size={18} /> Add Level
+          </button>
+        </div>
+      </div>
+
+      {/* Add Level Dropdown */}
+      {showAddLevel && (
+        <div className="game-editor-add-level">
+          <p>Select a level to add:</p>
+          <div className="game-editor-level-options">
+            {Object.entries(allAvailableLevels).map(([levelId, levelData]) => (
+              <div
+                key={levelId}
+                className={`game-editor-level-option ${game.levelIds.includes(levelId) ? 'disabled' : ''}`}
+                onClick={() => !game.levelIds.includes(levelId) && addLevel(levelId)}
+              >
+                <span>{levelData.name || 'Untitled Level'}</span>
+                {game.levelIds.includes(levelId) && <span className="added-tag">✓ Added</span>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Level List */}
+      <div className="game-editor-levels">
+        {game.levelIds.length === 0 ? (
+          <p className="game-editor-no-levels">No levels added yet. Click "Add Level" to get started.</p>
+        ) : (
+          game.levelIds.map((levelId, index) => {
+            const levelData = getLevelData(levelId);
+            return (
+              <div key={levelId} className="game-editor-level">
+                <div
+                  className="game-editor-level-header"
+                  onClick={() => toggleExpandLevel(levelId)}
+                >
+                  <span>
+                    {levelData.name || 'Untitled Level'}
+                    {game.storyline[index]?.length > 0 && (
+                      <span className="storyline-indicator">
+                        {' '}
+                        📖 {game.storyline[index].length} dialogue{game.storyline[index].length !== 1 ? 's' : ''}
+                      </span>
+                    )}
+                  </span>
+
+                  <div className="game-editor-level-actions">
+                    <MoveUp
+                      size={20}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        moveLevel(index, -1);
+                      }}
+                      style={{ opacity: index === 0 ? 0.3 : 1, cursor: index === 0 ? 'not-allowed' : 'pointer' }}
+                    />
+                    <MoveDown
+                      size={20}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        moveLevel(index, 1);
+                      }}
+                      style={{
+                        opacity: index === game.levelIds.length - 1 ? 0.3 : 1,
+                        cursor: index === game.levelIds.length - 1 ? 'not-allowed' : 'pointer',
+                      }}
+                    />
+                    <Trash2
+                      size={20}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeLevel(index);
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {expandedLevel === levelId && (
+                  <div className="game-editor-level-body">
+                    <pre>{JSON.stringify(levelData, null, 2)}</pre>
+                  </div>
+                )}
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* ACTION BUTTONS */}
+      <div className="game-editor-actions">
+        <button className="game-editor-btn" onClick={() => handleSave(false)} disabled={savingGame}>
+          💾 {savingGame ? 'Saving...' : 'Save Draft'}
+        </button>
+        <button className="game-editor-btn game-editor-btn-publish" onClick={() => handleSave(true)} disabled={savingGame}>
+          🚀 {savingGame ? 'Publishing...' : 'Publish'}
+        </button>
 
         {!isNew && (
-          <button className="danger" onClick={handleDelete}>
+          <button className="game-editor-btn game-editor-btn-danger" onClick={handleDelete} disabled={savingGame}>
             🗑 Delete Game
           </button>
         )}

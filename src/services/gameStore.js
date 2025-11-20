@@ -24,15 +24,19 @@ const storage = getStorage();
 /**
  * Writes or updates a game in Firebase.
  *
- * @param {string|null} id - Existing gameId OR null to generate a new one.
- * @param {string|null} author - Creator of the game.
- * @param {string|null} name - Game title.
- * @param {string|null} keywords - Search keywords.
- * @param {boolean} isPublished - Whether game is published.
- * @param {Array<string|null>} levelIds - List of level IDs.
- * @param {object|null} settings - Settings object.
+ * @param {Object} params - Game parameters
+ * @param {string|null} params.id - Existing gameId OR null to generate a new one.
+ * @param {string|null} params.author - Creator of the game.
+ * @param {string|null} params.name - Game title.
+ * @param {string|null} params.keywords - Search keywords.
+ * @param {boolean} params.isPublished - Whether game is published.
+ * @param {Array<string|null>} params.levelIds - List of level IDs.
+ * @param {object|null} params.settings - Settings object.
+ * @param {string|null} params.pin - Game PIN.
+ * @param {Array<Array<string>>} params.storyline - 2D array of dialogues per level.
+ * @param {string|null} params.description - Game description.
  */
-export const writeGame = async (
+export const writeGame = async ({
   id,
   author,
   name,
@@ -40,63 +44,93 @@ export const writeGame = async (
   isPublished,
   levelIds,
   settings,
-  pin
-) => {
+  pin,
+  storyline,
+  description
+}) => {
   // If no id, generate one automatically
   const gameId = id || push(ref(db, "Games")).key;
-
+  
   try {
     const safeLevelIds = Array.isArray(levelIds) ? levelIds : [];
+    const safeStoryline = Array.isArray(storyline) ? storyline : [];
+    
+    console.log("Saving game:", {
+      gameId,
+      author,
+      name,
+      keywords,
+      isPublished,
+      levelIds: safeLevelIds,
+      pin,
+      storyline: safeStoryline,
+      description
+    });
+    
     // All fields should be present for published games
-    if (
-      isPublished &&
-      (
-        !author ||
-        !name ||
-        !keywords ||
-        !settings ||
-        safeLevelIds.length === 0 ||
-        safeLevelIds.some((id) => id == null ||
-          pin == null)
-      )
-    ) {
-      return {
-        success: false,
-        status: 400,
-        message:
-          "Published game must have all required fields and valid levelIds.",
-      };
+    if (isPublished) {
+      const missingFields = [];
+      
+      if (!author) missingFields.push("author");
+      if (!name) missingFields.push("name");
+      if (!keywords) missingFields.push("keywords");
+      if (safeLevelIds.length === 0) missingFields.push("levelIds (at least one level required)");
+      if (safeLevelIds.some((id) => id == null)) missingFields.push("levelIds (all level IDs must be valid)");
+      if (pin == null || pin === "") missingFields.push("pin");
+      
+      if (missingFields.length > 0) {
+        return {
+          success: false,
+          status: 400,
+          message: `Published game missing required fields: ${missingFields.join(", ")}`,
+        };
+      }
     }
-
-    // ================================
-    // NORMALIZE LEVEL IDS AS OBJ
-    // ================================
+    
+    // Normalize level IDs as Object
     const levelIdsObj = {};
     safeLevelIds.forEach((lvlId, index) => {
       levelIdsObj[index] = lvlId ?? null;
     });
-
+    
+    // Normalize storyline as Object
+    const storylineObj = {};
+    safeStoryline.forEach((dialogues, levelIndex) => {
+      if (Array.isArray(dialogues) && dialogues.length > 0) {
+        storylineObj[levelIndex] = {};
+        dialogues.forEach((dialogue, dialogueIndex) => {
+          storylineObj[levelIndex][dialogueIndex] = dialogue;
+        });
+      }
+    });
+    
     const metadata = {
       author: author ?? null,
       name: name ?? null,
       keywords: keywords ?? null,
+      description: description ?? null,
       isPublished: isPublished ?? false,
-      pin: pin,
+      pin: pin ?? null,
     };
-
+    
     const gameData = {
       ...metadata,
       settings: settings ?? {},
       levelIds: levelIdsObj,
+      storyline: storylineObj,
     };
-
+    
+    console.log("Writing to Firebase:", { metadata, gameData });
+    
     const updates = {
       [`GameList/${gameId}`]: metadata,
       [`Games/${gameId}`]: gameData,
     };
-
+    
     await update(ref(db), updates);
-
+    
+    console.log("Game saved successfully!");
+    
     return {
       success: true,
       status: 200,
@@ -189,6 +223,8 @@ export const getGameById = async (id) => {
       keywords: game.keywords ?? null,
       isPublished: game.isPublished ?? false,
       settings: game.settings ?? {},
+      description: game.description ?? {},
+      pin: game.pin ?? {},
       levelIds: Array.isArray(game.levelIds)
         ? game.levelIds
         : game.levelIds
@@ -1028,6 +1064,8 @@ export default {
 };
 
 // More functions and updates needed:
+// The UI security is just a wrapper, even pin is only for UI, firebase can still be accessed on modifying jsx, implement correct firebase security rules
+// Implement pin logic, See if logged in users can bypass pin by knowing the game/level id and edit
 // Ask if Michael wants the levels in an already made and saved game to not update on change to the levels in level editor as it is already saved,
 // if levels are updated, then they would NEED to remove the old level and attach the new one in the game.
 // Implement character limits, only show the users the games they have created, add group functionality like an org so that they can edit games in collaboration.

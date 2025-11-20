@@ -3,167 +3,385 @@
 /* ---------------------------
    CONTAINER
 --------------------------- */
-.editor-container {
-  max-width: 900px;
-  margin: 20px auto;
-  padding: 20px;
-  background-color: #1e1e2f;
-  color: #f0f0f0;
+.game-editor {
+  max-width: 1000px;
+  margin: 40px auto;
+  padding: 40px;
+  background-color: #ffffff;
   border-radius: 12px;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 }
 
 /* ---------------------------
    HEADINGS
 --------------------------- */
-.editor-container h2,
-.editor-container h3 {
-  color: #fff;
-  margin-bottom: 10px;
-}
-
-.editor-container h3 {
-  margin-top: 20px;
-}
-
-/* ---------------------------
-   FORM / METADATA
---------------------------- */
-.editor-section {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-bottom: 20px;
-}
-
-.editor-section label {
+.game-editor-title {
+  color: #2c3e50;
+  font-size: 2.5rem;
+  margin-bottom: 40px;
+  text-align: center;
   font-weight: 600;
-  margin-bottom: 4px;
 }
 
-.editor-section input,
-.editor-section textarea {
-  padding: 8px 12px;
-  border-radius: 6px;
-  border: 1px solid #444;
-  background-color: #2a2a40;
-  color: #f0f0f0;
-  font-size: 14px;
-  outline: none;
-  transition: border 0.2s;
-}
-
-.editor-section input:focus,
-.editor-section textarea:focus {
-  border-color: #7c5fff;
-}
-
-.editor-section textarea {
-  resize: vertical;
-  min-height: 80px;
+.game-editor-subtitle {
+  color: #34495e;
+  font-size: 1.8rem;
+  margin: 0;
+  font-weight: 600;
 }
 
 /* ---------------------------
-   LEVEL LIST
+   INLINE EDITING ROWS
 --------------------------- */
-.level-list {
+.game-editor-info {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 25px;
+  margin-bottom: 40px;
 }
 
-.level-item {
-  background-color: #2a2a40;
-  border-radius: 8px;
-  overflow: hidden;
-  border: 1px solid #3c3c5c;
-}
-
-.level-header {
+.game-editor-row {
   display: flex;
-  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.game-editor-row label {
+  font-weight: 600;
+  color: #2c3e50;
+  font-size: 1.1rem;
+  min-width: 120px;
+  padding-top: 8px;
+}
+
+.game-editor-value {
+  flex: 1;
+  display: flex;
   align-items: center;
-  padding: 10px 14px;
-  cursor: pointer;
-  font-weight: 500;
-  background-color: #2f2f50;
-  transition: background-color 0.2s;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  transition: all 0.2s;
+  min-height: 40px;
 }
 
-.level-header:hover {
-  background-color: #3c3c5c;
+.game-editor-value:hover {
+  background-color: #f8f9fa;
+  border-color: #e0e0e0;
 }
 
-.level-actions svg {
+.game-editor-value span {
+  flex: 1;
+  color: #2c3e50;
   cursor: pointer;
-  margin-left: 8px;
-  color: #a0a0ff;
+  user-select: none;
+  line-height: 1.5;
+}
+
+.game-editor-value span:empty::before {
+  content: "Click to edit";
+  color: #95a5a6;
+  font-style: italic;
+}
+
+.game-editor-readonly {
+  color: #7f8c8d !important;
+  cursor: default !important;
+}
+
+/* Edit Icons */
+.game-editor-icon-edit {
+  width: 18px;
+  height: 18px;
+  color: #3498db;
+  cursor: pointer;
+  flex-shrink: 0;
   transition: color 0.2s;
 }
 
-.level-actions svg:hover {
-  color: #fff;
+.game-editor-icon-edit:hover {
+  color: #2980b9;
 }
 
-.level-body {
-  padding: 10px 14px;
-  background-color: #1f1f34;
-  font-size: 13px;
-  line-height: 1.4;
+.game-editor-icon-save {
+  width: 20px;
+  height: 20px;
+  color: #27ae60;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: color 0.2s;
+}
+
+.game-editor-icon-save:hover {
+  color: #229954;
+}
+
+.game-editor-icon-cancel {
+  width: 20px;
+  height: 20px;
+  color: #e74c3c;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: color 0.2s;
+}
+
+.game-editor-icon-cancel:hover {
+  color: #c0392b;
+}
+
+/* Editing Inputs */
+.game-editor-input-edit {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 2px solid #3498db;
+  background-color: #ffffff;
+  color: #2c3e50;
+  font-size: 1rem;
+  outline: none;
+  font-family: inherit;
+}
+
+.game-editor-textarea-edit {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 2px solid #3498db;
+  background-color: #ffffff;
+  color: #2c3e50;
+  font-size: 1rem;
+  outline: none;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 80px;
+  line-height: 1.5;
+}
+
+/* ---------------------------
+   LEVELS SECTION
+--------------------------- */
+.game-editor-levels-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.game-editor-add-level-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: none;
+  background-color: #3498db;
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.game-editor-add-level-btn:hover {
+  background-color: #2980b9;
+}
+
+/* Add Level Section */
+.game-editor-add-level {
+  margin-bottom: 20px;
+  padding: 20px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 2px solid #e0e0e0;
+}
+
+.game-editor-add-level p {
+  margin: 0 0 15px 0;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.game-editor-level-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.game-editor-level-option {
+  padding: 12px 16px;
+  background-color: #ffffff;
+  border-radius: 6px;
+  border: 2px solid #e0e0e0;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.game-editor-level-option:hover:not(.disabled) {
+  border-color: #3498db;
+  background-color: #ebf5fb;
+}
+
+.game-editor-level-option.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.added-tag {
+  color: #27ae60;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+/* Level List */
+.game-editor-levels {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 30px;
+}
+
+.game-editor-no-levels {
+  text-align: center;
+  color: #7f8c8d;
+  font-style: italic;
+  padding: 40px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+}
+
+.game-editor-level {
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 2px solid #e0e0e0;
+  transition: border-color 0.2s;
+}
+
+.game-editor-level:hover {
+  border-color: #bdc3c7;
+}
+
+.game-editor-level-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  cursor: pointer;
+  font-weight: 500;
+  background-color: #ffffff;
+  transition: background-color 0.2s;
+  color: #2c3e50;
+}
+
+.game-editor-level-header:hover {
+  background-color: #f8f9fa;
+}
+
+.game-editor-level-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.game-editor-level-actions svg {
+  cursor: pointer;
+  color: #7f8c8d;
+  transition: color 0.2s;
+}
+
+.game-editor-level-actions svg:hover {
+  color: #3498db;
+}
+
+.game-editor-level-body {
+  padding: 16px 20px;
+  background-color: #ecf0f1;
+  font-size: 0.9rem;
+  line-height: 1.6;
   max-height: 400px;
   overflow: auto;
+  color: #2c3e50;
+}
+
+.game-editor-level-body pre {
+  margin: 0;
   white-space: pre-wrap;
   word-wrap: break-word;
+  font-family: "Courier New", monospace;
 }
 
 /* ---------------------------
    ACTION BUTTONS
 --------------------------- */
-.editor-actions {
+.game-editor-actions {
   display: flex;
-  gap: 12px;
-  margin-top: 20px;
+  gap: 15px;
+  margin-top: 30px;
+  flex-wrap: wrap;
 }
 
-.editor-actions button {
-  padding: 10px 16px;
+.game-editor-btn {
+  padding: 12px 24px;
   border-radius: 8px;
   border: none;
-  background-color: #7c5fff;
-  color: #fff;
+  background-color: #3498db;
+  color: #ffffff;
   font-weight: 600;
+  font-size: 1rem;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.2s;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.editor-actions button:hover {
-  background-color: #a085ff;
+.game-editor-btn:hover {
+  background-color: #2980b9;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
-.editor-actions button.danger {
-  background-color: #ff4c4c;
+.game-editor-btn:active {
+  transform: translateY(0);
 }
 
-.editor-actions button.danger:hover {
-  background-color: #ff6e6e;
+.game-editor-btn-publish {
+  background-color: #27ae60;
+}
+
+.game-editor-btn-publish:hover {
+  background-color: #229954;
+}
+
+.game-editor-btn-danger {
+  background-color: #e74c3c;
+}
+
+.game-editor-btn-danger:hover {
+  background-color: #c0392b;
 }
 
 /* ---------------------------
    STATUS / ERROR MESSAGES
 --------------------------- */
-.status-msg,
-.error-msg {
+.game-editor-loading,
+.game-editor-error {
   text-align: center;
   font-weight: 600;
-  margin: 20px 0;
+  font-size: 1.2rem;
+  margin: 40px 0;
+  padding: 20px;
 }
 
-.status-msg {
-  color: #7c5fff;
+.game-editor-loading {
+  color: #3498db;
 }
 
-.error-msg {
-  color: #ff4c4c;
+.game-editor-error {
+  color: #e74c3c;
 }
-
