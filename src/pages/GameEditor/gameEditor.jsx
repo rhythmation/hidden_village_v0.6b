@@ -4,6 +4,54 @@ import { MoveUp, MoveDown, Trash2, Plus } from "lucide-react";
 import { gameManager } from "../../components/Game/GameManager";
 import "./GameEditor.css";
 
+const LevelPreview = ({ level }) => {
+    if (!level) return null;
+
+    const sprites = level.sprites || [];
+    const dialogues = level.dialogues || [];
+    const backgroundStyle = level.background
+        ? {
+            backgroundImage: `url(${level.background})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+        }
+        : {};
+
+    return (
+        <div className="game-editor-preview">
+            <div className="game-editor-preview-canvas" style={backgroundStyle}>
+                {sprites.map((sprite) => (
+                    <div
+                        key={sprite.id}
+                        className="game-editor-preview-sprite"
+                        style={{
+                            left: `${sprite.x || 0}px`,
+                            bottom: `${sprite.y || 0}px`,
+                        }}
+                    >
+                        {sprite.name || "Sprite"}
+                    </div>
+                ))}
+                {dialogues.length > 0 && (
+                    <div className="game-editor-preview-dialogue">
+                        {dialogues[0]}
+                        {dialogues.length > 1 && (
+                            <span className="game-editor-preview-dialogue-count">
+                                {`(+${dialogues.length - 1} more lines)`}
+                            </span>
+                        )}
+                    </div>
+                )}
+            </div>
+            <div className="game-editor-preview-meta">
+                <span>Sprites: {sprites.length}</span>
+                <span>Dialogues: {dialogues.length}</span>
+            </div>
+        </div>
+    );
+};
+
+
 function GameEditor() {
     const {
         games,
