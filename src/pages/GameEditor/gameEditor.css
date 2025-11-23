@@ -191,3 +191,113 @@
         flex-direction: column;
     }
 }
+
+.game-editor-level-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.game-editor-preview-toggle {
+    padding: 6px 12px;
+    border-radius: 999px;
+    border: 1px solid #e5e7eb;
+    background: #f9fafb;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.game-editor-preview-toggle:hover {
+    background: #e5e7eb;
+}
+
+.game-editor-preview {
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    background: #f9fafb;
+    padding: 8px;
+    margin-bottom: 16px;
+}
+
+.game-editor-preview-canvas {
+    position: relative;
+    height: 220px;
+    border-radius: 6px;
+    overflow: hidden;
+    background-color: #111827;
+    background-size: cover;
+    background-position: center;
+}
+
+.game-editor-preview-sprite {
+    position: absolute;
+    transform: translate(-50%, 0);
+    padding: 4px 8px;
+    border-radius: 999px;
+    border: 1px solid rgba(148, 163, 184, 0.8);
+    background: rgba(15, 23, 42, 0.9);
+    color: #e5e7eb;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.game-editor-preview-dialogue {
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: rgba(15, 23, 42, 0.92);
+    color: #e5e7eb;
+    font-size: 13px;
+}
+
+.game-editor-preview-dialogue-count {
+    font-size: 11px;
+    opacity: 0.8;
+    margin-left: 4px;
+}
+
+.game-editor-preview-meta {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 6px;
+    font-size: 12px;
+    color: #6b7280;
+}
+
+.game-editor-storyline {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.game-editor-storyline-section-title {
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
+.game-editor-storyline-flow {
+    border-radius: 6px;
+    border: 1px dashed #e5e7eb;
+    padding: 8px 10px;
+    max-height: 180px;
+    overflow-y: auto;
+    background: #f9fafb;
+    font-size: 12px;
+}
+
+.game-editor-storyline-step {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.game-editor-storyline-step-index {
+    font-weight: 600;
+    color: #6b7280;
+}
