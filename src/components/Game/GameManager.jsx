@@ -3,9 +3,18 @@ import { useState } from 'react';
 const DEFAULTS = {
     TITLE: "GAME TITLE",
     DESCRIPTION: "GAME DESCRIPTION",
-    DIALOGUES: ["Welcome to the game!", "This is your first challenge.", "Well done!"],
+    DIALOGUES: [
+        "Welcome to the game!",
+        "This is your first challenge.",
+        "Well done!"
+    ],
     SPRITES: [],
     BACKGROUND: null,
+    STORYLINE: {
+        summary: "",
+        objective: "",
+        notes: ""
+    },
     SETTINGS: {
         dialogue: {
             fontSettings: {
@@ -32,6 +41,7 @@ const DEFAULTS = {
         }
     }
 };
+
 
 //TODO: Combine this with database
 export function gameManager() {
