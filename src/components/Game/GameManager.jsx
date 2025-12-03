@@ -46,26 +46,29 @@ const DEFAULTS = {
 //TODO: Combine this with database
 export function gameManager() {
     const [gameData, setGameData] = useState({
-        games: [
-            { id: "game1", name: "Math Adventure" },
-            { id: "game2", name: "Space Explorer" },
-            { id: "game3", name: "Word Wizard" },
-        ],
-        levels: [
-            { 
-                id: "level1", 
-                gameId: "game1", 
-                name: "Level 1",
-                background: "/backgrounds/default.jpg",
-                sprites: [
-                    { id: "sprite1", name: "Player", image: "/sprites/player.png", x: 100, y: 100 },
-                    { id: "sprite2", name: "Enemy", image: "/sprites/enemy.png", x: 200, y: 200 }
-                ],
-                dialogues: DEFAULTS.DIALOGUES,
-                settings: DEFAULTS.SETTINGS
-            },
-        ]
-    });
+    games: [
+        { id: "game1", name: "Math Adventure" },
+        { id: "game2", name: "Space Explorer" },
+        { id: "game3", name: "Word Wizard" },
+    ],
+    levels: [
+        {
+            id: "level1",
+            gameId: "game1",
+            name: "Level 1",
+            background: "/backgrounds/default.jpg",
+            sprites: [
+                { id: "sprite1", name: "Player", image: "/sprites/player.png", x: 100, y: 100 },
+                { id: "sprite2", name: "Enemy", image: "/sprites/enemy.png", x: 200, y: 200 }
+            ],
+            dialogues: DEFAULTS.DIALOGUES,
+            storyline: DEFAULTS.STORYLINE,
+            settings: DEFAULTS.SETTINGS
+        },
+    ]
+});
+
+    
 
     const [selectedIds, setSelectedIds] = useState({
         gameId: null,
