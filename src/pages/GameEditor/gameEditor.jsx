@@ -4,6 +4,10 @@ import { MoveUp, MoveDown, Trash2, Plus } from "lucide-react";
 import { gameManager } from "../../components/Game/GameManager";
 import "./GameEditor.css";
 
+const [newNames, setNewNames] = useState({ game: "", level: "" });
+const [activeTab, setActiveTab] = useState("basic");
+const [showPreview, setShowPreview] = useState(true);
+
 const LevelPreview = ({ level }) => {
     if (!level) return null;
 
@@ -281,6 +285,80 @@ function GameEditor() {
                                         />
                                     </div>
                                 ))}
+                            </div>
+                        )}
+                                                {/* Storyline Tab */}
+                        {activeTab === "storyline" && (
+                            <div className="game-editor-storyline">
+                                <div className="game-editor-form-group">
+                                    <h4 className="game-editor-storyline-section-title">Level Summary</h4>
+                                    <textarea
+                                        value={selectedLevel.storyline?.summary || ""}
+                                        onChange={(e) =>
+                                            updateLevelData({
+                                                storyline: {
+                                                    ...(selectedLevel.storyline || {}),
+                                                    summary: e.target.value,
+                                                },
+                                            })
+                                        }
+                                        className="game-editor-textarea"
+                                        placeholder="Short overview of what happens in this level."
+                                    />
+                                </div>
+
+                                <div className="game-editor-form-group">
+                                    <h4 className="game-editor-storyline-section-title">Player Goal</h4>
+                                    <input
+                                        type="text"
+                                        value={selectedLevel.storyline?.objective || ""}
+                                        onChange={(e) =>
+                                            updateLevelData({
+                                                storyline: {
+                                                    ...(selectedLevel.storyline || {}),
+                                                    objective: e.target.value,
+                                                },
+                                            })
+                                        }
+                                        className="game-editor-input"
+                                        placeholder="What should the player accomplish in this level?"
+                                    />
+                                </div>
+
+                                <div className="game-editor-form-group">
+                                    <h4 className="game-editor-storyline-section-title">Notes</h4>
+                                    <textarea
+                                        value={selectedLevel.storyline?.notes || ""}
+                                        onChange={(e) =>
+                                            updateLevelData({
+                                                storyline: {
+                                                    ...(selectedLevel.storyline || {}),
+                                                    notes: e.target.value,
+                                                },
+                                            })
+                                        }
+                                        className="game-editor-textarea"
+                                        placeholder="Teacher / designer notes for this level."
+                                    />
+                                </div>
+
+                                <div className="game-editor-storyline-flow">
+                                    <h4 className="game-editor-storyline-section-title">Dialogue Flow</h4>
+                                    {selectedLevel.dialogues?.length ? (
+                                        selectedLevel.dialogues.map((dialogue, index) => (
+                                            <div key={index} className="game-editor-storyline-step">
+                                                <span className="game-editor-storyline-step-index">
+                                                    {index + 1}.
+                                                </span>
+                                                <span>{dialogue}</span>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <p style={{ fontSize: "12px", color: "#6b7280" }}>
+                                            No dialogue yet. Add lines in the Dialogues tab to build the story.
+                                        </p>
+                                    )}
+                                </div>
                             </div>
                         )}
 
