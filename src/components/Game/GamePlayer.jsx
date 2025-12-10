@@ -20,26 +20,30 @@ const UI_CONSTANTS = {
 };
 
 const Sprite = ({ sprite }) => {
-  const { x, y, appearance, name } = sprite;
-  
+  const { x, y, appearance, name, image } = sprite;
+
+  const spriteUrl = appearance?.sprite || image || "/assets/sprites/default.png";
+  const size = appearance?.size || 120;
+
   return (
     <div 
       className="sprite-wrapper" 
       style={{
         left: `${x}px`,
         bottom: `${y}px`,
-        width: `${appearance.size}px`,
-        height: `${appearance.size}px`,
+        width: `${size}px`,
+        height: `${size}px`,
       }}
     >
-      <img 
-        src={appearance.sprite}
+      <img
+        src={spriteUrl}
         alt={name}
         className="sprite-image"
       />
     </div>
   );
 };
+
 
 const GamePlayer = ({ gameData, initialLevel, onComplete }) => {
   const [currentDialogue, setCurrentDialogue] = useState(0);
